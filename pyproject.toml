@@ -22,7 +22,7 @@ classifiers = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.10,<3.13"
+python = ">=3.12,<4.0"
 # Hard rule: no SQLAlchemy, no FastAPI, no torch, no protea-core.
 # This package is the contract surface; it must stay importable in
 # downstream consumers (lab, runners, backends) without dragging the
