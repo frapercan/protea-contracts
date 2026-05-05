@@ -1,0 +1,176 @@
+"""Tests for protea_contracts.payloads (T1.3)."""
+
+from __future__ import annotations
+
+import uuid
+
+import pytest
+from pydantic import ValidationError
+
+from protea_contracts import (
+    PredictGOTermsBatchPayload,
+    PredictGOTermsPayload,
+    ProteaPayload,
+    RerankerSpec,
+    StorePredictionsPayload,
+)
+
+
+def _uuid() -> str:
+    return str(uuid.uuid4())
+
+
+class TestProteaPayloadBase:
+    def test_strict_mode_rejects_string_for_bool(self) -> None:
+        class _P(ProteaPayload, frozen=True):
+            flag: bool = False
+
+        with pytest.raises(ValidationError):
+            _P.model_validate({"flag": "yes"})
+
+    def test_frozen(self) -> None:
+        class _P(ProteaPayload, frozen=True):
+            n: int = 1
+
+        p = _P()
+        with pytest.raises(ValidationError):
+            p.n = 2  # type: ignore[misc]
+
+
+class TestPredictGOTermsPayload:
+    def _kwargs(self, **overrides: object) -> dict[str, object]:
+        defaults: dict[str, object] = {
+            "embedding_config_id": _uuid(),
+            "annotation_set_id": _uuid(),
+            "ontology_snapshot_id": _uuid(),
+        }
+        defaults.update(overrides)
+        return defaults
+
+    def test_minimal_valid_payload(self) -> None:
+        p = PredictGOTermsPayload.model_validate(self._kwargs())
+        # Defaults preserved exactly.
+        assert p.limit_per_entry == 5
+        assert p.batch_size == 1024
+        assert p.search_backend == "numpy"
+        assert p.compute_alignments is True
+        assert p.compute_taxonomy is True
+        assert p.compute_reranker_features is True
+        assert p.compute_v6_features is False
+        assert p.expand_votes_to_ancestors is False
+        assert p.aspect_separated_knn is True
+        assert p.reranker_model_id is None
+
+    def test_empty_id_raises(self) -> None:
+        with pytest.raises(ValidationError):
+            PredictGOTermsPayload.model_validate(
+                self._kwargs(embedding_config_id="")
+            )
+        with pytest.raises(ValidationError):
+            PredictGOTermsPayload.model_validate(
+                self._kwargs(ontology_snapshot_id="   ")
+            )
+
+    def test_strips_whitespace(self) -> None:
+        p = PredictGOTermsPayload.model_validate(
+            self._kwargs(embedding_config_id="  abc  ")
+        )
+        assert p.embedding_config_id == "abc"
+
+    def test_limit_per_entry_must_be_positive(self) -> None:
+        with pytest.raises(ValidationError):
+            PredictGOTermsPayload.model_validate(self._kwargs(limit_per_entry=0))
+
+    def test_query_accessions_optional(self) -> None:
+        p = PredictGOTermsPayload.model_validate(self._kwargs())
+        assert p.query_accessions is None
+        p2 = PredictGOTermsPayload.model_validate(
+            self._kwargs(query_accessions=["P12345", "Q67890"])
+        )
+        assert p2.query_accessions == ["P12345", "Q67890"]
+
+
+class TestPredictGOTermsBatchPayload:
+    def _kwargs(self, **overrides: object) -> dict[str, object]:
+        defaults: dict[str, object] = {
+            "embedding_config_id": _uuid(),
+            "annotation_set_id": _uuid(),
+            "ontology_snapshot_id": _uuid(),
+            "prediction_set_id": _uuid(),
+            "parent_job_id": _uuid(),
+            "query_accessions": ["P12345"],
+        }
+        defaults.update(overrides)
+        return defaults
+
+    def test_valid_payload(self) -> None:
+        p = PredictGOTermsBatchPayload.model_validate(self._kwargs())
+        assert p.limit_per_entry == 5
+        assert p.aspect_separated_knn is True
+
+    def test_query_accessions_required(self) -> None:
+        kwargs = self._kwargs()
+        del kwargs["query_accessions"]
+        with pytest.raises(ValidationError):
+            PredictGOTermsBatchPayload.model_validate(kwargs)
+
+    def test_reranker_context_optional(self) -> None:
+        p = PredictGOTermsBatchPayload.model_validate(self._kwargs())
+        assert p.reranker_model_id is None
+        assert p.reranker_artifact_uri is None
+        assert p.reranker_feature_schema_sha is None
+
+
+class TestStorePredictionsPayload:
+    def test_valid_payload(self) -> None:
+        p = StorePredictionsPayload.model_validate(
+            {
+                "parent_job_id": _uuid(),
+                "prediction_set_id": _uuid(),
+                "predictions": [{"protein": "P1", "go": "GO:1"}],
+            }
+        )
+        assert p.is_final_chunk is True
+        assert len(p.predictions) == 1
+
+    def test_is_final_chunk_overridable(self) -> None:
+        p = StorePredictionsPayload.model_validate(
+            {
+                "parent_job_id": _uuid(),
+                "prediction_set_id": _uuid(),
+                "predictions": [],
+                "is_final_chunk": False,
+            }
+        )
+        assert p.is_final_chunk is False
+
+
+class TestRerankerSpec:
+    def test_minimal_valid(self) -> None:
+        spec = RerankerSpec.model_validate({"runner": "lightgbm"})
+        assert spec.objective == "lambdarank"
+        assert spec.enabled_feature_families is None
+        assert spec.drop_features == []
+        assert spec.seed == 42
+        assert spec.extras == {}
+
+    def test_runner_required(self) -> None:
+        with pytest.raises(ValidationError):
+            RerankerSpec.model_validate({})
+        with pytest.raises(ValidationError):
+            RerankerSpec.model_validate({"runner": ""})
+
+    def test_runner_stripped(self) -> None:
+        spec = RerankerSpec.model_validate({"runner": "  lightgbm  "})
+        assert spec.runner == "lightgbm"
+
+    def test_extras_passthrough(self) -> None:
+        spec = RerankerSpec.model_validate(
+            {"runner": "lightgbm", "extras": {"num_boost_round": 5000}}
+        )
+        assert spec.extras["num_boost_round"] == 5000
+
+    def test_frozen(self) -> None:
+        spec = RerankerSpec.model_validate({"runner": "lightgbm"})
+        with pytest.raises(ValidationError):
+            spec.runner = "gnn"  # type: ignore[misc]
