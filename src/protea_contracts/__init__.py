@@ -25,6 +25,7 @@ from protea_contracts.payloads import (
     RerankerSpec,
     StorePredictionsPayload,
 )
+from protea_contracts.records import GoaAnnotationRecord, GoaStreamPayload
 
 __version__ = "0.1.0"
 
@@ -45,6 +46,8 @@ __all__ = [
     "Feature",
     "FeatureDtype",
     "FeatureRegistry",
+    "GoaAnnotationRecord",
+    "GoaStreamPayload",
     "ManifestV1",
     "PredictGOTermsBatchPayload",
     "PredictGOTermsPayload",
