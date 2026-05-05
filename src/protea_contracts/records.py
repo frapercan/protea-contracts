@@ -52,6 +52,92 @@ class GoaStreamPayload(BaseModel):
     """HTTP timeout in seconds. Must be positive."""
 
 
+class QuickGoStreamPayload(BaseModel):
+    """Input payload for :meth:`protea_sources.quickgo.QuickGoSource.stream`.
+
+    QuickGO's bulk-download endpoint returns paginated TSV. The plugin
+    handles batching on ``gene_product_ids`` to dodge URL-length 400
+    errors; the operation owns the upstream decision of *which* IDs to
+    feed (typically the canonical-accession universe from PROTEA's DB).
+    """
+
+    model_config = ConfigDict(frozen=True, strict=True, extra="forbid")
+
+    quickgo_base_url: str = (
+        "https://www.ebi.ac.uk/QuickGO/services/annotation/downloadSearch"
+    )
+    """QuickGO bulk-download endpoint URL."""
+
+    gene_product_ids: list[str] | None = None
+    """Subset of accession IDs to filter on. ``None`` = full database
+    (single unbatched request)."""
+
+    gene_product_batch_size: int = Field(default=200, gt=0)
+    """Per-batch size for ``geneProductId`` URL parameter. QuickGO
+    rejects very long URLs with 400; 200 keeps the URL bounded."""
+
+    timeout_seconds: int = Field(default=300, gt=0)
+    """HTTP timeout in seconds."""
+
+
+class EcoMappingPayload(BaseModel):
+    """Input payload for :meth:`protea_sources.quickgo.QuickGoSource.fetch_eco_mapping`.
+
+    The ECO-to-evidence-code map is an auxiliary fetch (D-MIGR-05): a
+    small file (< 100 KB), single shot, returns an in-memory dict the
+    operation can cache for the duration of a load.
+    """
+
+    model_config = ConfigDict(frozen=True, strict=True, extra="forbid")
+
+    url: str
+    """URL of the GAF ECO-mapping file (space-separated lines:
+    ``ECO:XXXXXXX  CODE``)."""
+
+    timeout_seconds: int = Field(default=60, gt=0)
+    """HTTP timeout. Smaller default than stream() — this is a small
+    file, not a multi-million-line stream."""
+
+
+class QuickGoAnnotationRecord(BaseModel):
+    """One annotation row parsed from a QuickGO TSV.
+
+    Field names are the clean Python form of the QuickGO TSV column
+    headers. The mapping is documented in
+    :func:`protea_sources.quickgo.parse_quickgo_row`. The ``eco_id``
+    field carries the raw ``ECO:XXXXXXX`` identifier; the operation
+    resolves it to a CAFA evidence code (``IDA``, ``IEA``...) via the
+    ECO mapping (or stores the raw ECO when no mapping is provided).
+    """
+
+    model_config = ConfigDict(frozen=True, strict=True, extra="forbid")
+
+    accession: str
+    """TSV column ``GENE PRODUCT ID``."""
+
+    go_id: str
+    """TSV column ``GO TERM``."""
+
+    qualifier: str | None = None
+    """TSV column ``QUALIFIER`` (``enables``, ``involved_in``, ...)."""
+
+    eco_id: str | None = None
+    """TSV column ``ECO ID``. Raw form. Operation maps to
+    ``evidence_code`` via ECO mapping fetch."""
+
+    db_reference: str | None = None
+    """TSV column ``REFERENCE``."""
+
+    with_from: str | None = None
+    """TSV column ``WITH/FROM``."""
+
+    assigned_by: str | None = None
+    """TSV column ``ASSIGNED BY``."""
+
+    annotation_date: str | None = None
+    """TSV column ``DATE``. Operation parses to date type."""
+
+
 class GoaAnnotationRecord(BaseModel):
     """One annotation row parsed from a GAF (UniProt-GOA) line.
 
