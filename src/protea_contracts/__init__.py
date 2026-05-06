@@ -1,6 +1,7 @@
 """Shared contract surface for the PROTEA stack."""
 
 from protea_contracts.annotation_source import AnnotationSource
+from protea_contracts.bio_utils import compute_sequence_hash, parse_isoform
 from protea_contracts.embedding_backend import EmbeddingBackend
 from protea_contracts.experiment_runner import EvalResult, ExperimentRunner, RunResult
 from protea_contracts.feature_registry import Feature, FeatureDtype, FeatureRegistry
@@ -67,5 +68,7 @@ __all__ = [
     "__version__",
     "compute_feature_schema_sha",
     "compute_schema_sha",
+    "compute_sequence_hash",
+    "parse_isoform",
     "required_columns",
 ]
