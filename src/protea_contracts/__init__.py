@@ -33,6 +33,8 @@ from protea_contracts.records import (
     QuickGoAnnotationRecord,
     QuickGoStreamPayload,
     UniProtFastaStreamPayload,
+    UniProtMetadataRecord,
+    UniProtMetadataStreamPayload,
     UniProtProteinRecord,
 )
 
@@ -68,6 +70,8 @@ __all__ = [
     "RunResult",
     "StorePredictionsPayload",
     "UniProtFastaStreamPayload",
+    "UniProtMetadataRecord",
+    "UniProtMetadataStreamPayload",
     "UniProtProteinRecord",
     "__version__",
     "compute_feature_schema_sha",

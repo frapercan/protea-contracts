@@ -243,6 +243,80 @@ class UniProtProteinRecord(BaseModel):
     sequence table; computed via :func:`compute_sequence_hash`."""
 
 
+class UniProtMetadataStreamPayload(BaseModel):
+    """Input payload for :meth:`protea_sources.uniprot.UniProtSource.stream_metadata`.
+
+    UniProt's REST search endpoint serves TSV via
+    ``format=tsv&fields=<comma-separated-list>``. The plugin owns
+    cursor-based pagination and HTTP retries (sharing the same
+    ``_http.py`` retry client as :meth:`stream_fasta`); the operation
+    owns the field list (it's a persistence concern: which TSV columns
+    map to which DB columns) and the per-row column-to-DB-col mapping.
+
+    The ``fields`` knob accepts the UniProt field names verbatim
+    (e.g. ``"accession"``, ``"protein_name"``, ``"ft_act_site"``) —
+    not the human header names (``"Entry"``, ``"Protein names"``,
+    ``"Active site"``). UniProt's TSV header row carries the human
+    names; the operation maps them via its ``FIELD_MAP`` constant.
+    """
+
+    model_config = ConfigDict(frozen=True, strict=True, extra="forbid")
+
+    search_criteria: str
+    """UniProtKB search query (e.g. ``"reviewed:true AND organism_id:9606"``)."""
+
+    fields: list[str]
+    """List of UniProt field identifiers to request (e.g.
+    ``["accession", "reviewed", "protein_name", ...]``). Determines the
+    TSV column set; the operation maps human-readable headers back to
+    DB columns via its persistence-side mapping."""
+
+    page_size: int = Field(default=500, gt=0)
+    """Records per page."""
+
+    timeout_seconds: int = Field(default=60, gt=0)
+    """HTTP request timeout."""
+
+    compressed: bool = True
+    """When True, requests gzip-compressed TSV. Default ``True`` here
+    (vs ``False`` for FASTA) because UniProt TSV responses are large
+    and compression typically wins by ~5x."""
+
+    max_retries: int = Field(default=6, gt=0)
+    backoff_base_seconds: float = Field(default=0.8, ge=0.0)
+    backoff_max_seconds: float = Field(default=20.0, ge=0.0)
+    jitter_seconds: float = Field(default=0.4, ge=0.0)
+    user_agent: str = "protea-sources/uniprot (contact: you@example.org)"
+    base_url: str = "https://rest.uniprot.org/uniprotkb/search"
+
+
+class UniProtMetadataRecord(BaseModel):
+    """One TSV row parsed from a UniProt metadata response.
+
+    The ``accession`` field carries the literal ``Entry`` cell (UniProt
+    accession, possibly an isoform). ``raw_fields`` is a flow-through
+    dict of all columns the request asked for, keyed by the
+    human-readable TSV header (e.g. ``"Active site"``,
+    ``"Protein names"``). The operation does the (TSV header → DB
+    column) mapping itself because that mapping is a persistence
+    detail, not a parser detail.
+
+    The record stays minimal on purpose: a more typed shape (dedicated
+    fields per metadata column) would couple the contract to the
+    operation's ``FIELD_MAP`` constant, breaking the boundary the
+    F2A.6-real plan establishes.
+    """
+
+    model_config = ConfigDict(frozen=True, strict=True, extra="forbid")
+
+    accession: str
+    """TSV column ``Entry`` — UniProt accession (canonical or isoform)."""
+
+    raw_fields: dict[str, str]
+    """All TSV columns of the row, keyed by the human-readable TSV
+    header. Empty cells are normalised to ``""``, never ``None``."""
+
+
 class GoaAnnotationRecord(BaseModel):
     """One annotation row parsed from a GAF (UniProt-GOA) line.
 

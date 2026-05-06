@@ -12,8 +12,96 @@ from protea_contracts.records import (
     QuickGoAnnotationRecord,
     QuickGoStreamPayload,
     UniProtFastaStreamPayload,
+    UniProtMetadataRecord,
+    UniProtMetadataStreamPayload,
     UniProtProteinRecord,
 )
+
+
+class TestUniProtMetadataStreamPayload:
+    def test_minimal_required_fields(self) -> None:
+        payload = UniProtMetadataStreamPayload(
+            search_criteria="reviewed:true",
+            fields=["accession", "protein_name"],
+        )
+        assert payload.search_criteria == "reviewed:true"
+        assert payload.fields == ["accession", "protein_name"]
+        assert payload.page_size == 500
+        assert payload.compressed is True  # metadata default differs from FASTA
+
+    def test_explicit_retry_knobs(self) -> None:
+        payload = UniProtMetadataStreamPayload(
+            search_criteria="x",
+            fields=["accession"],
+            timeout_seconds=120,
+            max_retries=10,
+        )
+        assert payload.timeout_seconds == 120
+        assert payload.max_retries == 10
+
+    def test_payload_is_frozen(self) -> None:
+        payload = UniProtMetadataStreamPayload(
+            search_criteria="x", fields=["accession"]
+        )
+        with pytest.raises(ValidationError):
+            payload.search_criteria = "y"  # type: ignore[misc]
+
+    def test_extra_field_rejected(self) -> None:
+        with pytest.raises(ValidationError, match="extra"):
+            UniProtMetadataStreamPayload(
+                search_criteria="x",
+                fields=["accession"],
+                cursor="oops",  # type: ignore[call-arg]
+            )
+
+    def test_missing_search_criteria_rejected(self) -> None:
+        with pytest.raises(ValidationError):
+            UniProtMetadataStreamPayload(fields=["accession"])  # type: ignore[call-arg]
+
+    def test_missing_fields_rejected(self) -> None:
+        with pytest.raises(ValidationError):
+            UniProtMetadataStreamPayload(search_criteria="x")  # type: ignore[call-arg]
+
+    def test_zero_page_size_rejected(self) -> None:
+        with pytest.raises(ValidationError):
+            UniProtMetadataStreamPayload(
+                search_criteria="x", fields=["accession"], page_size=0
+            )
+
+
+class TestUniProtMetadataRecord:
+    def test_minimal_construct(self) -> None:
+        rec = UniProtMetadataRecord(accession="P12345", raw_fields={})
+        assert rec.accession == "P12345"
+        assert rec.raw_fields == {}
+
+    def test_full_raw_fields(self) -> None:
+        rec = UniProtMetadataRecord(
+            accession="P12345",
+            raw_fields={
+                "Entry": "P12345",
+                "Active site": "ACT_SITE 100",
+                "Protein names": "Foo protein",
+            },
+        )
+        assert rec.raw_fields["Active site"] == "ACT_SITE 100"
+
+    def test_record_is_frozen(self) -> None:
+        rec = UniProtMetadataRecord(accession="P12345", raw_fields={})
+        with pytest.raises(ValidationError):
+            rec.accession = "Q67890"  # type: ignore[misc]
+
+    def test_extra_field_rejected(self) -> None:
+        with pytest.raises(ValidationError, match="extra"):
+            UniProtMetadataRecord(
+                accession="P12345",
+                raw_fields={},
+                fields={},  # type: ignore[call-arg]
+            )
+
+    def test_missing_required_field_rejected(self) -> None:
+        with pytest.raises(ValidationError):
+            UniProtMetadataRecord(accession="P12345")  # type: ignore[call-arg]
 
 
 class TestUniProtFastaStreamPayload:
