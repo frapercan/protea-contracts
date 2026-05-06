@@ -2,10 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Any
-
-import pytest
-
 from protea_contracts import AnnotationSource
 
 
@@ -15,25 +11,23 @@ class _FakeSource(AnnotationSource):
     name = "fake"
     version = "0.0.0-test"
 
-    def load(self, session: Any, payload: dict[str, Any], *, emit: Any) -> dict[str, Any]:
-        return {"rows": 0}
-
 
 class TestAnnotationSourceContract:
-    def test_subclass_must_implement_load(self) -> None:
-        class Bad(AnnotationSource):
-            name = "bad"
-            version = "0.0"
-
-        with pytest.raises(TypeError):
-            Bad()  # type: ignore[abstract]
-
     def test_concrete_subclass_can_be_instantiated(self) -> None:
         src = _FakeSource()
         assert src.name == "fake"
         assert src.version == "0.0.0-test"
 
-    def test_load_returns_summary_dict(self) -> None:
+    def test_isinstance_check_recognises_subclass(self) -> None:
+        # The ABC is a marker after D-MIGR-06: no abstract methods,
+        # so any subclass setting name + version qualifies as an
+        # AnnotationSource for dispatch / discovery purposes.
+        assert isinstance(_FakeSource(), AnnotationSource)
+
+    def test_class_attributes_typed(self) -> None:
+        # Both attributes are declared but not enforced at instantiation
+        # (Python doesn't run class-attribute annotations as runtime
+        # assertions). The contract relies on subclasses setting them.
         src = _FakeSource()
-        out = src.load(session=None, payload={}, emit=lambda *a, **kw: None)
-        assert isinstance(out, dict)
+        assert isinstance(src.name, str)
+        assert isinstance(src.version, str)

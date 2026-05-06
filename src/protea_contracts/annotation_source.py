@@ -5,36 +5,48 @@ implements ``AnnotationSource`` and registers itself via the
 ``protea.sources`` ``entry_points`` group. ``protea-core`` discovers
 the plugin at startup and dispatches load requests by ``name``.
 
+The ABC is a *marker* contract: subclasses set ``name`` and ``version``
+class attributes and add their own modality-specific methods (e.g.
+:meth:`GoaSource.stream`, :meth:`UniProtSource.stream_fasta`,
+:meth:`UniProtSource.stream_metadata`). There is intentionally no
+single ``stream``/``load`` abstract method here because UniProt has
+two distinct modalities (FASTA + metadata) and forcing a uniform
+dispatch interface across all plugins would either obscure that fact
+or push polymorphism overhead down the call path. Callers dispatch
+via the plugin's class — :class:`isinstance` checks against the ABC
+preserve "is this an annotation source plugin?" semantics without
+requiring a shared method shape.
+
 Example::
 
     from protea_contracts.annotation_source import AnnotationSource
 
-    class GOASource(AnnotationSource):
-        name = "goa"
-        version = "GOA/UniProt-230"
+    class MySource(AnnotationSource):
+        name = "my_source"
+        version = "1.0"
 
-        def load(self, session, payload, *, emit):
-            # Download the GAF, parse, populate AnnotationSet rows...
-            return {"rows_inserted": 12345}
+        def stream(self, payload, *, emit):
+            # Source-specific yield-records implementation...
+            ...
 """
 
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
-from typing import Any
+from abc import ABC
 
 
 class AnnotationSource(ABC):
-    """Contract for a plugin that loads annotations into the platform.
+    """Marker contract for an annotation source plugin.
 
-    Implementations live in ``protea-sources``. Each plugin provides
-    a stable ``name`` (used for routing), a human-readable ``version``
-    (used in audit logs and dataset manifests), and a ``load`` method
-    that runs the source-specific download / parse / insert pipeline.
+    Subclasses MUST set ``name`` as a class attribute (used by
+    ``protea-core`` to dispatch). ``version`` may be a class attribute
+    or a property when the version is resolved dynamically (e.g. read
+    from a downloaded release header).
 
-    Subclasses MUST set ``name`` as a class attribute. ``version`` may
-    be a class attribute or a property when the version is resolved
-    dynamically (e.g. read from a downloaded release header).
+    The ABC was reduced to a marker shape in D-MIGR-06 of master plan
+    v3 once the F2A.6-real migration replaced the legacy ``load()``
+    method with per-source modality-specific methods (``stream``,
+    ``stream_fasta``, ``stream_metadata``, ``fetch_eco_mapping``).
     """
 
     name: str
@@ -46,31 +58,3 @@ class AnnotationSource(ABC):
     Stored in ``AnnotationSet.source_version`` so a prediction set can
     always be traced back to the exact source release that produced it.
     """
-
-    @abstractmethod
-    def load(
-        self,
-        session: Any,
-        payload: dict[str, Any],
-        *,
-        emit: Any,
-    ) -> dict[str, Any]:
-        """Run the load pipeline for this source.
-
-        Args:
-            session: SQLAlchemy session passed by ``protea-core``.
-                Typed as ``Any`` here because ``protea-contracts``
-                cannot import sqlalchemy. Implementations narrow it to
-                ``sqlalchemy.orm.Session``.
-            payload: Source-specific configuration validated by the
-                implementation (typically a pydantic model dump).
-            emit: Structured-event callback the platform provides; same
-                signature as ``protea-core``'s ``EmitFn``. Implementations
-                use it to surface progress.
-
-        Returns:
-            Free-form dict with summary statistics (counts, timings,
-            anomalies) that ``protea-core`` stores as the resulting
-            ``Job.meta``.
-        """
-        raise NotImplementedError
