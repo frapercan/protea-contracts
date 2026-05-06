@@ -138,6 +138,111 @@ class QuickGoAnnotationRecord(BaseModel):
     """TSV column ``DATE``. Operation parses to date type."""
 
 
+class UniProtFastaStreamPayload(BaseModel):
+    """Input payload for :meth:`protea_sources.uniprot.UniProtSource.stream_fasta`.
+
+    UniProt's REST search endpoint (``/uniprotkb/search?format=fasta``)
+    returns paginated FASTA data with cursor-based pagination via the
+    ``Link: ...; rel="next"`` HTTP header. The plugin handles the
+    cursor extraction and HTTP retry/backoff with jitter; the operation
+    owns batching policy, deduplication, and persistence.
+
+    The retry knobs (``max_retries``, ``backoff_base_seconds``,
+    ``backoff_max_seconds``, ``jitter_seconds``) are part of the
+    plugin contract because UniProt's rate-limit and 5xx-error
+    behaviour vary by query and time of day; production runs need
+    to tune them per workload.
+    """
+
+    model_config = ConfigDict(frozen=True, strict=True, extra="forbid")
+
+    search_criteria: str
+    """UniProtKB search query (e.g. ``"reviewed:true AND organism_id:9606"``)."""
+
+    page_size: int = Field(default=500, gt=0)
+    """Records per page (UniProt caps at ~500 for FASTA format)."""
+
+    timeout_seconds: int = Field(default=60, gt=0)
+    """HTTP request timeout."""
+
+    include_isoforms: bool = True
+    """When True, adds ``includeIsoform=true`` to the query string so
+    UniProt returns ``<canonical>-<n>`` accessions alongside canonicals."""
+
+    compressed: bool = False
+    """When True, requests gzip-compressed FASTA via ``compressed=true``
+    and decompresses on receipt."""
+
+    max_retries: int = Field(default=6, gt=0)
+    """Maximum retry attempts on 429 / 5xx / network errors."""
+
+    backoff_base_seconds: float = Field(default=0.8, ge=0.0)
+    """Exponential-backoff base; wait grows as ``base * 2**(attempt-1)``."""
+
+    backoff_max_seconds: float = Field(default=20.0, ge=0.0)
+    """Cap on backoff wait so a long retry doesn't dominate the run."""
+
+    jitter_seconds: float = Field(default=0.4, ge=0.0)
+    """Random uniform jitter added to each backoff sleep."""
+
+    user_agent: str = "protea-sources/uniprot (contact: you@example.org)"
+    """User-Agent header (UniProt asks integrators to identify themselves)."""
+
+    base_url: str = "https://rest.uniprot.org/uniprotkb/search"
+    """Search endpoint URL. Override only for testing or mirrors."""
+
+
+class UniProtProteinRecord(BaseModel):
+    """One protein record parsed from a UniProt FASTA response.
+
+    Field set mirrors the canonical UniProt FASTA header layout
+    (``sp|<accession>|<entry_name> <description> OS=... OX=... GN=...``)
+    plus the sequence body. The plugin handles isoform splitting via
+    :func:`protea_contracts.parse_isoform` and sequence hashing via
+    :func:`protea_contracts.compute_sequence_hash` so the record is
+    immediately persistable by the operation without further computation.
+    """
+
+    model_config = ConfigDict(frozen=True, strict=True, extra="forbid")
+
+    accession: str
+    """UniProt accession (canonical or isoform form)."""
+
+    entry_name: str | None = None
+    """UniProt entry name (e.g. ``"FOO_HUMAN"``); None for malformed headers."""
+
+    canonical_accession: str
+    """Canonical accession (always the bare ID without the ``-N`` suffix)."""
+
+    is_canonical: bool
+    """True iff ``accession == canonical_accession``."""
+
+    isoform_index: int | None = None
+    """Isoform number when the accession matches ``<canonical>-<n>``."""
+
+    organism: str | None = None
+    """Organism string from the ``OS=`` marker."""
+
+    taxonomy_id: str | None = None
+    """NCBI taxonomy ID from the ``OX=`` marker."""
+
+    gene_name: str | None = None
+    """Gene symbol from the ``GN=`` marker."""
+
+    reviewed: bool
+    """True iff the FASTA header starts with ``sp|`` (Swiss-Prot)."""
+
+    sequence: str
+    """Amino-acid sequence (whitespace stripped, uppercase as received)."""
+
+    length: int = Field(gt=0)
+    """Length of ``sequence`` in residues."""
+
+    sequence_hash: str
+    """MD5 hex digest of the sequence (32 chars). Dedup key for the
+    sequence table; computed via :func:`compute_sequence_hash`."""
+
+
 class GoaAnnotationRecord(BaseModel):
     """One annotation row parsed from a GAF (UniProt-GOA) line.
 

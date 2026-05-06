@@ -11,7 +11,124 @@ from protea_contracts.records import (
     GoaStreamPayload,
     QuickGoAnnotationRecord,
     QuickGoStreamPayload,
+    UniProtFastaStreamPayload,
+    UniProtProteinRecord,
 )
+
+
+class TestUniProtFastaStreamPayload:
+    def test_minimal_required_field(self) -> None:
+        payload = UniProtFastaStreamPayload(search_criteria="reviewed:true")
+        assert payload.search_criteria == "reviewed:true"
+        assert payload.page_size == 500
+        assert payload.include_isoforms is True
+        assert payload.compressed is False
+        assert "rest.uniprot.org" in payload.base_url
+
+    def test_explicit_retry_knobs(self) -> None:
+        payload = UniProtFastaStreamPayload(
+            search_criteria="x",
+            max_retries=10,
+            backoff_base_seconds=1.5,
+            backoff_max_seconds=60.0,
+            jitter_seconds=0.0,
+        )
+        assert payload.max_retries == 10
+        assert payload.jitter_seconds == 0.0
+
+    def test_payload_is_frozen(self) -> None:
+        payload = UniProtFastaStreamPayload(search_criteria="x")
+        with pytest.raises(ValidationError):
+            payload.search_criteria = "y"  # type: ignore[misc]
+
+    def test_extra_field_rejected(self) -> None:
+        with pytest.raises(ValidationError, match="extra"):
+            UniProtFastaStreamPayload(
+                search_criteria="x",
+                cursor="oops",  # type: ignore[call-arg]
+            )
+
+    def test_missing_search_criteria_rejected(self) -> None:
+        with pytest.raises(ValidationError):
+            UniProtFastaStreamPayload()  # type: ignore[call-arg]
+
+    def test_zero_page_size_rejected(self) -> None:
+        with pytest.raises(ValidationError):
+            UniProtFastaStreamPayload(search_criteria="x", page_size=0)
+
+    def test_zero_max_retries_rejected(self) -> None:
+        # gt=0 — every UniProt request must allow at least 1 retry.
+        with pytest.raises(ValidationError):
+            UniProtFastaStreamPayload(search_criteria="x", max_retries=0)
+
+    def test_negative_backoff_rejected(self) -> None:
+        with pytest.raises(ValidationError):
+            UniProtFastaStreamPayload(search_criteria="x", backoff_base_seconds=-1.0)
+
+
+class TestUniProtProteinRecord:
+    def _full_kwargs(self) -> dict:
+        return {
+            "accession": "P12345",
+            "entry_name": "FOO_HUMAN",
+            "canonical_accession": "P12345",
+            "is_canonical": True,
+            "isoform_index": None,
+            "organism": "Homo sapiens",
+            "taxonomy_id": "9606",
+            "gene_name": "FOO",
+            "reviewed": True,
+            "sequence": "MKTAYIAK",
+            "length": 8,
+            "sequence_hash": "abc123" * 5 + "ab",  # 32 chars
+        }
+
+    def test_full_record_constructs(self) -> None:
+        rec = UniProtProteinRecord(**self._full_kwargs())
+        assert rec.accession == "P12345"
+        assert rec.length == 8
+
+    def test_isoform_record(self) -> None:
+        kwargs = self._full_kwargs()
+        kwargs.update(
+            accession="P12345-2",
+            is_canonical=False,
+            isoform_index=2,
+        )
+        rec = UniProtProteinRecord(**kwargs)
+        assert rec.isoform_index == 2
+        assert rec.is_canonical is False
+
+    def test_record_is_frozen(self) -> None:
+        rec = UniProtProteinRecord(**self._full_kwargs())
+        with pytest.raises(ValidationError):
+            rec.accession = "Q67890"  # type: ignore[misc]
+
+    def test_extra_field_rejected(self) -> None:
+        kwargs = self._full_kwargs()
+        kwargs["fragment"] = False  # type: ignore[assignment]
+        with pytest.raises(ValidationError, match="extra"):
+            UniProtProteinRecord(**kwargs)
+
+    def test_missing_required_field_rejected(self) -> None:
+        kwargs = self._full_kwargs()
+        del kwargs["sequence"]
+        with pytest.raises(ValidationError):
+            UniProtProteinRecord(**kwargs)
+
+    def test_zero_length_rejected(self) -> None:
+        kwargs = self._full_kwargs()
+        kwargs["length"] = 0
+        with pytest.raises(ValidationError):
+            UniProtProteinRecord(**kwargs)
+
+    def test_unreviewed_record(self) -> None:
+        kwargs = self._full_kwargs()
+        kwargs["reviewed"] = False
+        kwargs["entry_name"] = None
+        rec = UniProtProteinRecord(**kwargs)
+        assert rec.reviewed is False
+        assert rec.entry_name is None
 
 
 class TestQuickGoStreamPayload:

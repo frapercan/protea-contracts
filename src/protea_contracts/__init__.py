@@ -32,6 +32,8 @@ from protea_contracts.records import (
     GoaStreamPayload,
     QuickGoAnnotationRecord,
     QuickGoStreamPayload,
+    UniProtFastaStreamPayload,
+    UniProtProteinRecord,
 )
 
 __version__ = "0.1.0"
@@ -65,6 +67,8 @@ __all__ = [
     "RerankerSpec",
     "RunResult",
     "StorePredictionsPayload",
+    "UniProtFastaStreamPayload",
+    "UniProtProteinRecord",
     "__version__",
     "compute_feature_schema_sha",
     "compute_schema_sha",
