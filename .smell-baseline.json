@@ -1,0 +1,19 @@
+{
+  "thresholds": {
+    "file_loc": 800,
+    "class_loc": 500,
+    "method_loc": 60,
+    "param_count": 6
+  },
+  "offenders": [
+    {
+      "key": "params::src/protea_contracts/embedding_backend.py::EmbeddingBackend.embed_batch",
+      "kind": "params",
+      "path": "src/protea_contracts/embedding_backend.py",
+      "name": "EmbeddingBackend.embed_batch",
+      "line": 69,
+      "metric": 8,
+      "threshold": 6
+    }
+  ]
+}

@@ -2,6 +2,12 @@
 
 from protea_contracts.annotation_source import AnnotationSource
 from protea_contracts.bio_utils import compute_sequence_hash, parse_isoform
+from protea_contracts.contexts import (
+    ExportContext,
+    ExportSink,
+    FeatureBuildContext,
+    KnnContext,
+)
 from protea_contracts.embedding_backend import EmbeddingBackend
 from protea_contracts.experiment_runner import EvalResult, ExperimentRunner, RunResult
 from protea_contracts.feature_registry import Feature, FeatureDtype, FeatureRegistry
@@ -38,7 +44,7 @@ from protea_contracts.records import (
     UniProtProteinRecord,
 )
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 __all__ = [
     "ALL_FEATURES",
@@ -55,11 +61,15 @@ __all__ = [
     "EmbeddingBackend",
     "EvalResult",
     "ExperimentRunner",
+    "ExportContext",
+    "ExportSink",
     "Feature",
+    "FeatureBuildContext",
     "FeatureDtype",
     "FeatureRegistry",
     "GoaAnnotationRecord",
     "GoaStreamPayload",
+    "KnnContext",
     "ManifestV1",
     "PredictGOTermsBatchPayload",
     "PredictGOTermsPayload",

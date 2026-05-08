@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 from pydantic import ValidationError
 
@@ -155,7 +157,7 @@ class TestUniProtFastaStreamPayload:
 
 
 class TestUniProtProteinRecord:
-    def _full_kwargs(self) -> dict:
+    def _full_kwargs(self) -> dict[str, Any]:
         return {
             "accession": "P12345",
             "entry_name": "FOO_HUMAN",
@@ -194,7 +196,7 @@ class TestUniProtProteinRecord:
 
     def test_extra_field_rejected(self) -> None:
         kwargs = self._full_kwargs()
-        kwargs["fragment"] = False  # type: ignore[assignment]
+        kwargs["fragment"] = False
         with pytest.raises(ValidationError, match="extra"):
             UniProtProteinRecord(**kwargs)
 
