@@ -104,6 +104,44 @@ poetry run ruff check .
 poetry run mypy --strict src
 ```
 
+## Contributing
+
+Contributions are welcome from research institutions and individual developers.
+
+**Branch strategy:** all changes target `develop`; `main` tracks stable
+releases only.
+
+```bash
+git clone https://github.com/frapercan/protea-contracts.git
+cd protea-contracts
+git checkout develop
+git checkout -b feature/my-change
+
+poetry install
+
+# Make your changes, then verify locally:
+poetry run pytest             # ~140 tests, < 1 s
+poetry run ruff check .
+poetry run mypy --strict src
+
+# Open a pull request targeting develop
+```
+
+Key constraints:
+- **Zero runtime deps** on `sqlalchemy`, `fastapi`, `torch`, or
+  `protea-core`. Adding any of those is a hard stop.
+- **SemVer discipline.** Any change to a payload field name, dtype, or
+  ordering of `ALL_FEATURES` is a breaking change that requires a major
+  version bump and a coordinated upgrade of every downstream consumer
+  (PROTEA, protea-method, protea-reranker-lab).
+- **Golden test.** The `compute_schema_sha` digest of `ALL_FEATURES` is
+  pinned in `tests/test_feature_schema.py`. A schema-breaking change
+  that does not explicitly update the expected digest will fail CI.
+- **Records are leaves.** New record types go in `records.py`. Plugin
+  authors yield records; the consuming operation in PROTEA reads them.
+  Records must not carry ORM references or cross the package boundary
+  in the reverse direction.
+
 ## Documentation
 
 Full Sphinx documentation in `docs/source/` — every ABC and every
