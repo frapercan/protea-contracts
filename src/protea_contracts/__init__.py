@@ -9,6 +9,7 @@ from protea_contracts.contexts import (
     KnnContext,
 )
 from protea_contracts.embedding_backend import EmbeddingBackend
+from protea_contracts.embedding_payload import EmbeddingPayload, Granularity
 from protea_contracts.experiment_runner import EvalResult, ExperimentRunner, RunResult
 from protea_contracts.feature_registry import Feature, FeatureDtype, FeatureRegistry
 from protea_contracts.feature_schema import (
@@ -44,7 +45,7 @@ from protea_contracts.records import (
     UniProtProteinRecord,
 )
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 __all__ = [
     "ALL_FEATURES",
@@ -59,6 +60,7 @@ __all__ = [
     "DatasetSpec",
     "EcoMappingPayload",
     "EmbeddingBackend",
+    "EmbeddingPayload",
     "EvalResult",
     "ExperimentRunner",
     "ExportContext",
@@ -69,6 +71,7 @@ __all__ = [
     "FeatureRegistry",
     "GoaAnnotationRecord",
     "GoaStreamPayload",
+    "Granularity",
     "KnnContext",
     "ManifestV1",
     "PredictGOTermsBatchPayload",
