@@ -69,6 +69,12 @@ class PredictGOTermsPayload(ProteaPayload, frozen=True):
     # the 25 extra columns are persisted on every ``GOPrediction`` row.
     compute_v6_features: bool = False
 
+    # Lineage features (4 columns) describing the GO-DAG relation
+    # between each candidate term and the query's pre-cutoff known
+    # annotations. Default off so existing boosters (trained without
+    # the lineage family) continue to score bit-exact.
+    compute_lineage_features: bool = False
+
     # Ancestor expansion of leaf GO predictions (opt-in). When enabled,
     # every leaf candidate gets its is_a / part_of ancestor closure
     # synthesised as additional records, matching the candidate
@@ -127,6 +133,11 @@ class PredictGOTermsBatchPayload(ProteaPayload, frozen=True):
     compute_taxonomy: bool = True
     compute_reranker_features: bool = True
     compute_v6_features: bool = False
+    # Lineage features (4 columns) describing the GO-DAG relation
+    # between each candidate term and the query's pre-cutoff known
+    # annotations. Default off so bit-exact reproducibility against
+    # the current lab champion (52 features, no lineage) is preserved.
+    compute_lineage_features: bool = False
     expand_votes_to_ancestors: bool = False
     aspect_separated_knn: bool = True
 
