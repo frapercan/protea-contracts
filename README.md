@@ -5,8 +5,17 @@ stack. Holds the four plugin ABCs, the typed payload + record types
 that cross package boundaries, the canonical feature schema, and the
 pure-function bio utilities that ORM models and source plugins both
 reuse. Zero runtime deps on `sqlalchemy`, `fastapi`, `torch`, or
-`protea-core` — this package must stay importable from any consumer
+`protea-core`; this package must stay importable from any consumer
 without dragging the platform.
+
+**Status:** v0.2.0 (beta, pre-1.0; SemVer-disciplined: any change to payload field names, dtypes, or `ALL_FEATURES` ordering is a breaking change requiring a major bump).
+See the [PROTEA stack architecture](https://github.com/frapercan/PROTEA#repositories-in-the-protea-stack) for where this package fits.
+
+**Install + smoke test:**
+```bash
+pip install protea-contracts
+python -c "from protea_contracts import ALL_FEATURES, compute_schema_sha; print(compute_schema_sha(ALL_FEATURES))"
+```
 
 ## 5 minutes to your first plugin import
 
@@ -22,10 +31,10 @@ from protea_contracts import (
     compute_schema_sha, ALL_FEATURES,
 )
 
-# 1. Build a typed payload — typos fail at construction, not at runtime.
+# 1. Build a typed payload: typos fail at construction, not at runtime.
 payload = GoaStreamPayload(gaf_url="https://example.com/x.gaf.gz")
 
-# 2. Build a frozen record — validates field shape + types at construction.
+# 2. Build a frozen record: validates field shape + types at construction.
 record = GoaAnnotationRecord(accession="P12345", go_id="GO:0008150")
 
 # 3. Use the bio utilities directly, no ORM needed.
@@ -144,7 +153,7 @@ Key constraints:
 
 ## Documentation
 
-Full Sphinx documentation in `docs/source/` — every ABC and every
+Full Sphinx documentation in `docs/source/`, with every ABC and every
 payload/record class autodocumented with usage examples. Build
 locally with `poetry install --with docs && cd docs && make html`.
 
