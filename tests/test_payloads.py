@@ -57,6 +57,7 @@ class TestPredictGOTermsPayload:
         assert p.compute_taxonomy is True
         assert p.compute_reranker_features is True
         assert p.compute_v6_features is False
+        assert p.compute_lineage_features is False
         assert p.expand_votes_to_ancestors is False
         assert p.aspect_separated_knn is True
         assert p.reranker_model_id is None

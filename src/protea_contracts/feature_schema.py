@@ -83,6 +83,15 @@ NUMERIC_FEATURES: list[str] = [
     "emb_pca_query_13",
     "emb_pca_query_14",
     "emb_pca_query_15",
+    # Lineage (GO-DAG relation between candidate and the query's
+    # pre-cutoff known annotations). Provided by
+    # ``protea_method.lineage.compute_lineage_features``. Opt-in via
+    # the ``compute_lineage_features`` payload flag; existing
+    # boosters that did not train on the family ignore these columns.
+    "lineage_is_ancestor_of_known",
+    "lineage_is_descendant_of_known",
+    "lineage_ancestor_of_count",
+    "lineage_descendant_of_count",
 ]
 
 #: Embedding-PCA projection dimensionality. Must equal the number of
@@ -158,6 +167,12 @@ FEATURE_FAMILIES: dict[str, list[str]] = {
         "anc2vec_query_known_count",
     ],
     "emb_pca": [f"emb_pca_query_{i}" for i in range(EMBEDDING_PCA_DIM)],
+    "lineage": [
+        "lineage_is_ancestor_of_known",
+        "lineage_is_descendant_of_known",
+        "lineage_ancestor_of_count",
+        "lineage_descendant_of_count",
+    ],
     "annotation_meta": ["qualifier", "evidence_code", "aspect"],
 }
 
