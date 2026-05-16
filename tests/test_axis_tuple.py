@@ -117,7 +117,7 @@ def test_unencodable_value_raises_typeerror() -> None:
     # the caller pre-stringifies, mirroring the lab
     # ``ExperimentSpec.model_dump(mode="json")`` step.
     with pytest.raises(TypeError, match="JSON-encodable"):
-        axis_tuple_shortid({"plm": {1, 2, 3}})  # type: ignore[dict-item]
+        axis_tuple_shortid({"plm": {1, 2, 3}})
 
 
 def test_accepts_mapping_not_just_dict() -> None:
