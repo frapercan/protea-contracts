@@ -151,6 +151,46 @@ Key constraints:
   Records must not carry ORM references or cross the package boundary
   in the reverse direction.
 
+## Producer coverage CI
+
+`ALL_FEATURES` is the canonical column set the PROTEA dump pipeline
+must emit. The downstream parquet exporter enforces a
+`shard.columns superset_of ALL_FEATURES` invariant at write time
+(`protea/core/parquet_export.py:_assert_canonical_columns`). When a
+column is added to `ALL_FEATURES` without an unconditional producer
+in the dump path, the invariant only fails AFTER multi-hour KNN
+compute (the 2026-05-13 lineage incident burned ~5 h of LB.1 v226
+compute before crashing).
+
+To prevent this regression, every PR that touches
+`feature_schema.py`, the contracts `__init__.py`, `payloads.py`, or
+the coverage test itself runs the dedicated workflow
+`.github/workflows/producer-coverage.yml`. The job invokes
+`tests/test_feature_producer_coverage.py`, which iterates the full
+powerset of bool flags on `PredictGOTermsBatchPayload` (currently 128
+combinations) and asserts that a mocked dump producer emits a
+superset of `ALL_FEATURES` for every combination. Runtime is well
+under one second; failure mode is a 1-second red CI on the contracts
+PR.
+
+**Adding a new feature column safely:**
+
+1. Append the column name to `NUMERIC_FEATURES` or
+   `CATEGORICAL_FEATURES` in `feature_schema.py`.
+2. In the SAME PR, update
+   `tests/test_feature_producer_coverage.py:_simulate_dump_record` to
+   emit the new column unconditionally.
+3. Open the matching PROTEA PR that wires an unconditional producer
+   (or a zero / NaN default in
+   `protea/core/_leaf_record_builder.py:_LeafRecordBuilder.make_leaf_record`).
+4. The contracts PR cannot merge until the simulator has been
+   updated. The PROTEA PR cannot merge until its producer wiring is
+   exercised by its own test suite.
+
+If you cannot keep the column unconditional, do not add it to
+`ALL_FEATURES`: a conditional column belongs in a separate optional
+schema, not in the canonical surface.
+
 ## Documentation
 
 Full Sphinx documentation in `docs/source/`, with every ABC and every
