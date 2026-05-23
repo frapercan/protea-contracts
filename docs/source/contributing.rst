@@ -61,7 +61,7 @@ on V2.
 Adding a payload field
 ----------------------
 
-Pydantic v2 makes optional fields with a default cheap. Add a field
+Pydantic makes optional fields with a default cheap. Add a field
 with ``Optional[T] = None``, document the semantics, bump minor. Old
 clients keep working.
 

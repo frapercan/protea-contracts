@@ -44,7 +44,7 @@ What lives here
 Why a separate contracts package
 --------------------------------
 
-Three reasons drove the split (master plan v3, ADR D1):
+Three reasons drove the split (ADR D1):
 
 1. **Plugin extensibility.** New annotation sources, embedding
    backends and experiment runners must be addable as out-of-tree
@@ -68,7 +68,19 @@ Contents
 
 .. toctree::
    :maxdepth: 2
+   :caption: Concepts
 
    abcs/index
    schema
+
+.. toctree::
+   :maxdepth: 2
+   :caption: API reference
+
+   reference/index
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Development
+
    contributing
