@@ -17,7 +17,7 @@ rather than silently scoring on misaligned columns.
 
 Past silent drift between two parallel definitions of
 ``compute_schema_sha`` (lab vs platform) cost one non-reproducible
-study run in 2026-05-01. ADR D10 documents the v2 migration that
+study run in 2026-05-01. ADR D10 documents the migration that
 brings every consumer onto a single source of truth.
 
 .. automodule:: protea_contracts.feature_schema
@@ -42,8 +42,8 @@ Manifest
 
 The parquet manifest written by ``export_research_dataset`` and read
 by ``protea-runners.lightgbm`` (and the legacy lab). ``ManifestV1``
-is the canonical shape; future versions add a discriminated ``v``
-field rather than mutating ``v1`` in place.
+is the canonical shape; future versions add a discriminated version
+field rather than mutating the current class in place.
 
 .. automodule:: protea_contracts.manifest
    :members:
