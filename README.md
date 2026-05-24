@@ -11,9 +11,10 @@ platform.
 [![codecov](https://codecov.io/gh/frapercan/protea-contracts/branch/develop/graph/badge.svg)](https://codecov.io/gh/frapercan/protea-contracts)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/)
 
-**Status:** v0.3.0 (beta, pre-1.0). SemVer-disciplined: any change to a payload field
-name, dtype, or `ALL_FEATURES` ordering is a breaking change that requires a major
-version bump and a coordinated upgrade across every downstream consumer.
+**Status:** v0.3.0, production (foundational). Every active repo in the PROTEA stack
+imports this package. SemVer-disciplined: any change to a payload field name, dtype,
+or `ALL_FEATURES` ordering is a breaking change that requires a major version bump
+and a coordinated upgrade across every downstream consumer.
 
 ---
 
