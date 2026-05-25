@@ -26,7 +26,7 @@ What lives here
      - Role
    * - :doc:`abcs/annotation_source`
      - Plugin contract for annotation sources (``goa``, ``quickgo``,
-       ``uniprot``, future ``interproscan``).
+       ``uniprot``, ``interpro``).
    * - :doc:`abcs/embedding_backend`
      - Plugin contract for protein language model backends (``esm``,
        ``t5``, ``ankh``, ``esm3c``).

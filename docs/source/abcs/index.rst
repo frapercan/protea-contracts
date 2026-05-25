@@ -13,7 +13,7 @@ PROTEA stack.
      - Implemented in
    * - :doc:`AnnotationSource <annotation_source>`
      - ``protea.sources``
-     - ``protea-sources/{goa,quickgo,uniprot}``
+     - ``protea-sources/{goa,quickgo,uniprot,interpro}``
    * - :doc:`EmbeddingBackend <embedding_backend>`
      - ``protea.backends``
      - ``protea-backends/{esm,t5,ankh,esm3c}``
