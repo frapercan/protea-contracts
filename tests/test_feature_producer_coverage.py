@@ -194,6 +194,15 @@ def _simulate_dump_record(flags: dict[str, bool]) -> set[str]:
     # Categorical metadata (qualifier / evidence_code / aspect).
     produced.update(["qualifier", "evidence_code", "aspect"])
 
+    # Pool-stage injected columns (v3+): NOT produced by the PROTEA dump
+    # pipeline. These are injected by the lab's multi-manifest pooled
+    # loader at stage time for the universal multi-PLM reranker.
+    # The dump pipeline writes them as NULL/NaN; the pooled loader fills
+    # them with per-source constants before passing rows to LightGBM.
+    # They must be in ALL_FEATURES so the booster schema is consistent,
+    # but they are NOT a dump-path obligation.
+    produced.update(["plm_id", "k_context"])
+
     # Touch ``flags`` so static analysers do not flag the parameter as
     # unused; the value is intentionally ignored because every column
     # is unconditional today.

@@ -25,7 +25,7 @@ from protea_contracts import (
 
 class TestConstants:
     def test_schema_version(self) -> None:
-        assert SCHEMA_VERSION == "v2"
+        assert SCHEMA_VERSION == "v3"
 
     def test_label_column(self) -> None:
         assert LABEL_COLUMN == "label"
@@ -68,9 +68,16 @@ class TestComputeSchemaSha:
           2. Re-training of every downstream LightGBM booster.
 
         Update the literal below intentionally as part of the bump.
+
+        v3 (1.0.0): added k_context (numeric) + plm_id (categorical)
+        as pool-stage-injected features for the universal multi-PLM
+        reranker (F-RERANK-UNIVERSAL.2). Both columns are absent from
+        the raw parquet dumps and injected at stage time. See
+        FEATURE_LEAKAGE_AUDIT.md for GO/NO-GO ruling on plm_id.
+        Previous golden (v2 / 0.3.0): 145592ed186c
         """
         sha = compute_schema_sha(ALL_FEATURES)
-        assert sha == "145592ed186c", (
+        assert sha == "a0986dedd912", (
             f"ALL_FEATURES sha drifted from golden: got {sha}. "
             "If this change is intended, bump protea-contracts to "
             "the next major and update this golden literal."
