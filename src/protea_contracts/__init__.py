@@ -1,6 +1,11 @@
 """Shared contract surface for the PROTEA stack."""
 
 from protea_contracts.annotation_source import AnnotationSource
+from protea_contracts.axis_tuple import (
+    CANONICAL_AXIS_KEYS,
+    SHORTID_HEX_LEN,
+    axis_tuple_shortid,
+)
 from protea_contracts.bio_utils import compute_sequence_hash, parse_isoform
 from protea_contracts.contexts import (
     ExportContext,
@@ -45,10 +50,11 @@ from protea_contracts.records import (
     UniProtProteinRecord,
 )
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 
 __all__ = [
     "ALL_FEATURES",
+    "CANONICAL_AXIS_KEYS",
     "CATEGORICAL_FEATURES",
     "EMBEDDING_PCA_DIM",
     "FEATURE_FAMILIES",
@@ -56,6 +62,7 @@ __all__ = [
     "NUMERIC_FEATURES",
     "RESERVED_COLUMNS",
     "SCHEMA_VERSION",
+    "SHORTID_HEX_LEN",
     "AnnotationSource",
     "DatasetSpec",
     "EcoMappingPayload",
@@ -87,6 +94,7 @@ __all__ = [
     "UniProtMetadataStreamPayload",
     "UniProtProteinRecord",
     "__version__",
+    "axis_tuple_shortid",
     "compute_feature_schema_sha",
     "compute_schema_sha",
     "compute_sequence_hash",
