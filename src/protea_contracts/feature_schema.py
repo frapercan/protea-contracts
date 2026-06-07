@@ -20,9 +20,11 @@ import hashlib
 
 #: Bumping any of the constants below or this version forces a major
 #: ``protea-contracts`` release.
-SCHEMA_VERSION = "v2"
+SCHEMA_VERSION = "v3"
 
 #: Numeric features computed per (query, candidate GO term).
+#: ``k_context`` is injected at pool-stage time (not in parquet); it
+#: encodes the KNN neighbourhood size used to retrieve the candidate.
 NUMERIC_FEATURES: list[str] = [
     "distance",
     # NW alignment
@@ -65,6 +67,10 @@ NUMERIC_FEATURES: list[str] = [
     "tax_voters_same_frac",
     "tax_voters_close_frac",
     "tax_voters_mean_common_ancestors",
+    # Multi-source pooling context: KNN neighbourhood size used to
+    # retrieve the candidate. Injected at stage time per manifest source;
+    # absent from the raw parquet dumps.
+    "k_context",
     # Sequence-embedding PCA: 16-dim query projection. NaN when disabled,
     # LightGBM treats them as missing.
     "emb_pca_query_0",
@@ -91,11 +97,16 @@ EMBEDDING_PCA_DIM = 16
 
 #: Categorical features. The lab encodes these once and the codes ride
 #: alongside in the parquet so the booster sees stable integer codes.
+#: ``plm_id`` is injected at pool-stage time (not in parquet); it
+#: encodes which protein language model produced the embeddings used for
+#: KNN retrieval. See FEATURE_LEAKAGE_AUDIT.md for the GO/NO-GO ruling
+#: on this column.
 CATEGORICAL_FEATURES: list[str] = [
     "qualifier",
     "evidence_code",
     "taxonomic_relation",
     "aspect",
+    "plm_id",
 ]
 
 #: Concatenation of numeric + categorical, in the order LightGBM expects
@@ -159,6 +170,14 @@ FEATURE_FAMILIES: dict[str, list[str]] = {
     ],
     "emb_pca": [f"emb_pca_query_{i}" for i in range(EMBEDDING_PCA_DIM)],
     "annotation_meta": ["qualifier", "evidence_code", "aspect"],
+    # Multi-source pooling context features (v3+).
+    # plm_id: which PLM produced the embeddings used for KNN retrieval.
+    # Injected at pool-stage time; absent from raw parquet dumps.
+    # See FEATURE_LEAKAGE_AUDIT.md for GO/NO-GO ruling.
+    "plm_context": ["plm_id"],
+    # k_context: KNN neighbourhood size (K) for this manifest source.
+    # Injected at pool-stage time; absent from raw parquet dumps.
+    "k_neighborhood": ["k_context"],
 }
 
 #: Reserved column names: present in every parquet dump alongside the
