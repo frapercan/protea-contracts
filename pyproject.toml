@@ -7,14 +7,14 @@ name = "protea-contracts"
 version = "1.0.1"
 description = "Shared ABCs, payload schemas, feature registry contract and compute_schema_sha helper for the PROTEA stack."
 authors = ["Francisco Miguel Pérez Canales <frapercan1@gmail.com>"]
-license = "MIT"
+license = "Unlicense"
 readme = "README.md"
 packages = [{ include = "protea_contracts", from = "src" }]
 keywords = ["bioinformatics", "protein-function-prediction", "gene-ontology", "schemas"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: The Unlicense (Unlicense)",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
