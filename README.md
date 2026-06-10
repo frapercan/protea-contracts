@@ -11,7 +11,7 @@ platform.
 [![codecov](https://codecov.io/gh/frapercan/protea-contracts/branch/develop/graph/badge.svg)](https://codecov.io/gh/frapercan/protea-contracts)
 [![PyPI](https://img.shields.io/pypi/v/protea-contracts.svg)](https://pypi.org/project/protea-contracts/)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](https://opensource.org/licenses/MIT)
+[![License: Unlicense](https://img.shields.io/badge/license-Unlicense-blue.svg)](https://unlicense.org/)
 
 **Status:** v1.0.1, production (foundational). Every active repo in the PROTEA stack
 imports this package. SemVer-disciplined: any change to a payload field name, dtype,
@@ -95,7 +95,7 @@ Zero runtime deps on `sqlalchemy`, `fastapi`, `torch`, or `protea-core`. Any
 consumer can install this package without dragging the platform stack.
 
 Full architecture documentation is published at
-**https://frapercan.github.io/protea-contracts/** (source in
+**https://protea-contracts.readthedocs.io** (source in
 [`docs/source/`](docs/source/); build locally with
 `poetry install --with docs && cd docs && make html`).
 
@@ -292,6 +292,8 @@ Key constraints:
 
 ## License
 
-MIT. See `LICENSE`.
+Released into the public domain under [The Unlicense](https://unlicense.org/). See
+[`LICENSE`](LICENSE). You may copy, modify, publish, use, compile, sell, or distribute
+this software for any purpose, with no conditions.
 
 Author: Francisco Miguel Pérez Canales.
