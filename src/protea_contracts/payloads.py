@@ -20,6 +20,18 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 PositiveInt = Annotated[int, Field(gt=0)]
 
 
+def _require_non_empty_str(value: str, label: str) -> str:
+    """Validate that ``value`` is a non-empty, non-whitespace string.
+
+    Shared by the ``field_validator`` hooks below so the "stringy id"
+    rule lives in one place. Returns the stripped value; raises
+    ``ValueError`` otherwise.
+    """
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{label} must be a non-empty string")
+    return value.strip()
+
+
 class ProteaPayload(BaseModel):
     """Immutable, strictly-typed base class for all operation payloads.
 
@@ -97,9 +109,7 @@ class PredictGOTermsPayload(ProteaPayload, frozen=True):
     )
     @classmethod
     def must_be_non_empty(cls, v: str) -> str:
-        if not isinstance(v, str) or not v.strip():
-            raise ValueError("must be a non-empty string")
-        return v.strip()
+        return _require_non_empty_str(v, "value")
 
 
 class PredictGOTermsBatchPayload(ProteaPayload, frozen=True):
@@ -188,6 +198,4 @@ class RerankerSpec(BaseModel):
     @field_validator("runner", mode="before")
     @classmethod
     def must_be_non_empty(cls, v: str) -> str:
-        if not isinstance(v, str) or not v.strip():
-            raise ValueError("runner must be a non-empty string")
-        return v.strip()
+        return _require_non_empty_str(v, "runner")

@@ -13,6 +13,13 @@ dist/
 htmlcov/
 coverage.xml
 
+# Sphinx
+docs/_build/
+
+# Virtualenv
+.venv/
+venv/
+
 # Editor
 .vscode/
 .idea/
