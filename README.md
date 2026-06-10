@@ -6,12 +6,12 @@ the canonical feature schema with its load-bearing `compute_schema_sha` fingerpr
 and pure-function bio utilities that every consumer can import without dragging the
 platform.
 
-[![Lint](https://github.com/frapercan/protea-contracts/actions/workflows/lint.yml/badge.svg)](https://github.com/frapercan/protea-contracts/actions/workflows/lint.yml)
-[![Tests](https://github.com/frapercan/protea-contracts/actions/workflows/test.yml/badge.svg)](https://github.com/frapercan/protea-contracts/actions/workflows/test.yml)
+[![CI](https://github.com/frapercan/protea-contracts/actions/workflows/ci.yml/badge.svg)](https://github.com/frapercan/protea-contracts/actions/workflows/ci.yml)
+[![Docs](https://github.com/frapercan/protea-contracts/actions/workflows/docs.yml/badge.svg)](https://github.com/frapercan/protea-contracts/actions/workflows/docs.yml)
 [![codecov](https://codecov.io/gh/frapercan/protea-contracts/branch/develop/graph/badge.svg)](https://codecov.io/gh/frapercan/protea-contracts)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/)
 
-**Status:** v0.3.0, production (foundational). Every active repo in the PROTEA stack
+**Status:** v1.0.1, production (foundational). Every active repo in the PROTEA stack
 imports this package. SemVer-disciplined: any change to a payload field name, dtype,
 or `ALL_FEATURES` ordering is a breaking change that requires a major version bump
 and a coordinated upgrade across every downstream consumer.
@@ -92,7 +92,9 @@ protea-contracts  (this repo)
 Zero runtime deps on `sqlalchemy`, `fastapi`, `torch`, or `protea-core`. Any
 consumer can install this package without dragging the platform stack.
 
-Full architecture documentation: [`docs/source/`](docs/source/) (build with
+Full architecture documentation is published at
+**https://frapercan.github.io/protea-contracts/** (source in
+[`docs/source/`](docs/source/); build locally with
 `poetry install --with docs && cd docs && make html`).
 
 ---
@@ -153,6 +155,7 @@ class MyBackend(EmbeddingBackend):
 | `feature_registry` | `Feature`, `FeatureDtype`, `FeatureRegistry` | PROTEA core, `protea-runners.lightgbm` |
 | `feature_schema` | `ALL_FEATURES`, `FEATURE_FAMILIES`, `compute_schema_sha`, `SCHEMA_VERSION` | PROTEA core (export + inference), `protea-runners.lightgbm` (training) |
 | `payloads` | `ProteaPayload`, `PredictGOTermsPayload`, `PredictGOTermsBatchPayload`, `StorePredictionsPayload`, `RerankerSpec` | PROTEA core operations |
+| `axis_tuple` | `CANONICAL_AXIS_KEYS`, `SHORTID_HEX_LEN`, `axis_tuple_shortid` | PROTEA core (ExperimentRun id), `protea-reranker-lab` (catalog join) |
 | `manifest` | `ManifestV1`, `DatasetSpec` | PROTEA core (export), `protea-runners.lightgbm` (training) |
 | `records` | `GoaAnnotationRecord`, `GoaStreamPayload`, `QuickGoAnnotationRecord`, `QuickGoStreamPayload`, `EcoMappingPayload`, `UniProtProteinRecord`, `UniProtFastaStreamPayload`, `UniProtMetadataRecord`, `UniProtMetadataStreamPayload` | `protea-sources` (output), PROTEA core (input) |
 | `bio_utils` | `parse_isoform`, `compute_sequence_hash` | PROTEA ORM (forwarder), `protea-sources` (UniProt parser) |
@@ -194,13 +197,13 @@ The docs cover:
 
 ## Versioning
 
-SemVer 2.0.0:
+SemVer 2.0.0 (the package is past `1.0`, so the rules apply strictly):
 
 - **Major** (X.0.0): breaking change to any public ABC, payload, record, or to the
   schema sha output.
-- **Minor** (0.X.0): new features (additional fields with defaults, new optional
+- **Minor** (x.Y.0): new features (additional fields with defaults, new optional
   methods on a plugin, new record type for a new source).
-- **Patch** (0.0.X): bug fixes that do not change the contract.
+- **Patch** (x.y.Z): bug fixes that do not change the contract.
 
 Every release is tagged in git. The `compute_schema_sha` digest of `ALL_FEATURES` is
 recomputed on every release and pinned in `tests/test_feature_schema.py`, so a
