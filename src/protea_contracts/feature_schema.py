@@ -16,7 +16,7 @@ unsorted list) can still be loaded.
 
 from __future__ import annotations
 
-import hashlib
+from protea_contracts._hashing import short_sha
 
 #: Bumping any of the constants below or this version forces a major
 #: ``protea-contracts`` release.
@@ -213,7 +213,7 @@ def compute_schema_sha(columns: list[str]) -> str:
     SemVer major bump on this package.
     """
     blob = "|".join(sorted(columns)).encode()
-    return hashlib.sha256(blob).hexdigest()[:12]
+    return short_sha(blob)
 
 
 def compute_feature_schema_sha(
@@ -241,7 +241,7 @@ def compute_feature_schema_sha(
     if drop:
         parts.append("drop=" + ",".join(sorted(drop)))
     blob = "|".join(parts).encode()
-    return hashlib.sha256(blob).hexdigest()[:12]
+    return short_sha(blob)
 
 
 def required_columns(
