@@ -3,7 +3,8 @@ Quickstart for plugin authors
 
 ``protea-contracts`` is what you import to extend the PROTEA stack
 without depending on the platform core. This page walks a plugin author
-from install to a registered, discoverable plugin.
+from install to a registered, discoverable plugin. For the mental model
+behind these steps, read :doc:`concepts` first.
 
 Install
 -------
@@ -123,4 +124,5 @@ Next steps
 
 - :doc:`abcs/index` for the full lifecycle of each plugin contract.
 - :doc:`schema` for payloads, manifest, records and axis keys.
+- :doc:`reference/index` for per-symbol autodoc.
 - :doc:`contributing` before you change a public symbol (SemVer rules).
