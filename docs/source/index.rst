@@ -39,7 +39,7 @@ What lives here
    * - :doc:`schema`
      - Canonical feature schema (``ALL_FEATURES``, families,
        ``compute_schema_sha``), pydantic payloads, parquet manifest,
-       streaming records.
+       streaming records, and the axis-tuple provenance key.
 
 Why a separate contracts package
 --------------------------------
@@ -67,8 +67,14 @@ Contents
 --------
 
 .. toctree::
+   :maxdepth: 1
+   :caption: Getting started
+
+   quickstart
+
+.. toctree::
    :maxdepth: 2
-   :caption: Concepts
+   :caption: The contract model
 
    abcs/index
    schema
