@@ -7,7 +7,7 @@ and pure-function bio utilities that every consumer can import without dragging 
 platform.
 
 [![CI](https://github.com/frapercan/protea-contracts/actions/workflows/ci.yml/badge.svg)](https://github.com/frapercan/protea-contracts/actions/workflows/ci.yml)
-[![Docs](https://github.com/frapercan/protea-contracts/actions/workflows/docs.yml/badge.svg)](https://github.com/frapercan/protea-contracts/actions/workflows/docs.yml)
+[![Documentation](https://img.shields.io/readthedocs/protea-contracts.svg)](https://protea-contracts.readthedocs.io)
 [![codecov](https://codecov.io/gh/frapercan/protea-contracts/branch/develop/graph/badge.svg)](https://codecov.io/gh/frapercan/protea-contracts)
 [![PyPI](https://img.shields.io/pypi/v/protea-contracts.svg)](https://pypi.org/project/protea-contracts/)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/)
@@ -171,7 +171,9 @@ models.
 
 ## Architecture
 
-Full Sphinx documentation lives in `docs/source/`. Build locally:
+Full Sphinx documentation is hosted at
+[protea-contracts.readthedocs.io](https://protea-contracts.readthedocs.io)
+and the source lives in `docs/source/`. Build locally:
 
 ```bash
 poetry install --with docs
