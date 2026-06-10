@@ -183,6 +183,8 @@ cd docs && make html
 
 The docs cover:
 
+- Concepts: how the contract enables the plugin architecture and how the schema fingerprint guards drift
+- Quickstart for plugin authors (subclass an ABC, set `name`, register via entry points)
 - Plugin ABC contracts and their lifecycle (ABCs section)
 - Canonical feature schema and the schema_sha fingerprint guarantee
 - Producer coverage CI guard (prevents dump-pipeline crashes on new columns)
