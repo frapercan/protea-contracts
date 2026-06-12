@@ -89,6 +89,25 @@ NUMERIC_FEATURES: list[str] = [
     "emb_pca_query_13",
     "emb_pca_query_14",
     "emb_pca_query_15",
+    # InterPro signature->GO mapping features. Computed per
+    # (query protein, candidate GO term) from the InterPro member-DB
+    # signatures that map onto the candidate term. Bool/int/float are
+    # treated as numeric by LightGBM (same convention as anc2vec_has_emb).
+    "interpro_hit",
+    "interpro_score",
+    "interpro_n_signatures",
+    # Member-DB one-hots: which signature databases supplied a mapping.
+    "interpro_db_pfam",
+    "interpro_db_panther",
+    "interpro_db_superfamily",
+    "interpro_db_smart",
+    "interpro_db_cdd",
+    "interpro_db_prosite",
+    # Presence flags: whether each evidence source contributed a
+    # candidate at all for this (protein, go_id). Used to tell a true
+    # zero apart from an absent source when pooling KNN + InterPro.
+    "knn_present",
+    "interpro_present",
 ]
 
 #: Embedding-PCA projection dimensionality. Must equal the number of
@@ -178,6 +197,23 @@ FEATURE_FAMILIES: dict[str, list[str]] = {
     # k_context: KNN neighbourhood size (K) for this manifest source.
     # Injected at pool-stage time; absent from raw parquet dumps.
     "k_neighborhood": ["k_context"],
+    # InterPro signature->GO mapping family (vNext reranker). Computed
+    # from the InterPro member-DB signatures that map onto the candidate
+    # term, plus the per-source presence flags used when pooling KNN and
+    # InterPro candidates.
+    "interpro": [
+        "interpro_hit",
+        "interpro_score",
+        "interpro_n_signatures",
+        "interpro_db_pfam",
+        "interpro_db_panther",
+        "interpro_db_superfamily",
+        "interpro_db_smart",
+        "interpro_db_cdd",
+        "interpro_db_prosite",
+        "knn_present",
+        "interpro_present",
+    ],
 }
 
 #: Reserved column names: present in every parquet dump alongside the
