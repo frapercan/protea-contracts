@@ -75,9 +75,14 @@ class TestComputeSchemaSha:
         the raw parquet dumps and injected at stage time. See
         FEATURE_LEAKAGE_AUDIT.md for GO/NO-GO ruling on plm_id.
         Previous golden (v2 / 0.3.0): 145592ed186c
+
+        1.1.0: added the interpro feature family (interpro_hit,
+        interpro_score, interpro_n_signatures, six member-DB one-hots,
+        plus knn_present / interpro_present presence flags) for the
+        vNext InterPro reranker. Previous golden (v3 / 1.0.x): a0986dedd912
         """
         sha = compute_schema_sha(ALL_FEATURES)
-        assert sha == "a0986dedd912", (
+        assert sha == "8d9a1668b1a2", (
             f"ALL_FEATURES sha drifted from golden: got {sha}. "
             "If this change is intended, bump protea-contracts to "
             "the next major and update this golden literal."

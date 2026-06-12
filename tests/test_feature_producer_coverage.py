@@ -203,6 +203,27 @@ def _simulate_dump_record(flags: dict[str, bool]) -> set[str]:
     # but they are NOT a dump-path obligation.
     produced.update(["plm_id", "k_context"])
 
+    # InterPro signature->GO mapping columns (vNext reranker). Emitted
+    # unconditionally by the dump path with zero / NaN defaults when the
+    # protein has no InterPro signatures, mirroring the anc2vec zero-fill
+    # pattern. The per-source presence flags (knn_present / interpro_present)
+    # are likewise always present.
+    produced.update(
+        [
+            "interpro_hit",
+            "interpro_score",
+            "interpro_n_signatures",
+            "interpro_db_pfam",
+            "interpro_db_panther",
+            "interpro_db_superfamily",
+            "interpro_db_smart",
+            "interpro_db_cdd",
+            "interpro_db_prosite",
+            "knn_present",
+            "interpro_present",
+        ]
+    )
+
     # Touch ``flags`` so static analysers do not flag the parameter as
     # unused; the value is intentionally ignored because every column
     # is unconditional today.

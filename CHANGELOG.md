@@ -8,6 +8,20 @@ Because every consumer in the PROTEA stack pins this package, breaking changes
 (removed or renamed exports, payload field changes, ABC signature changes, or a
 moved `compute_schema_sha` / `axis_tuple_shortid` digest) require a major bump.
 
+## [1.1.0]
+
+### Added
+
+- `interpro` feature family in `feature_schema`: `interpro_hit`,
+  `interpro_score`, `interpro_n_signatures`, the member-DB one-hots
+  (`interpro_db_pfam`, `interpro_db_panther`, `interpro_db_superfamily`,
+  `interpro_db_smart`, `interpro_db_cdd`, `interpro_db_prosite`) and the
+  per-source presence flags (`knn_present`, `interpro_present`). The columns
+  join `ALL_FEATURES` (numeric block) and a new `interpro` entry in
+  `FEATURE_FAMILIES` so the export producer and reranker lab can reference the
+  InterPro signature-to-GO mapping features. The `ALL_FEATURES` golden digest
+  moves from `a0986dedd912` to `8d9a1668b1a2`.
+
 ## [Unreleased]
 
 ### Added
