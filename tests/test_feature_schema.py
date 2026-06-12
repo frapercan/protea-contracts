@@ -70,7 +70,7 @@ class TestComputeSchemaSha:
         Update the literal below intentionally as part of the bump.
         """
         sha = compute_schema_sha(ALL_FEATURES)
-        assert sha == "5dc696be2f18", (
+        assert sha == "4390db315e76", (
             f"ALL_FEATURES sha drifted from golden: got {sha}. "
             "If this change is intended, bump protea-contracts to "
             "the next major and update this golden literal."
