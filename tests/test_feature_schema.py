@@ -25,7 +25,7 @@ from protea_contracts import (
 
 class TestConstants:
     def test_schema_version(self) -> None:
-        assert SCHEMA_VERSION == "v2"
+        assert SCHEMA_VERSION == "v3"
 
     def test_label_column(self) -> None:
         assert LABEL_COLUMN == "label"
@@ -68,9 +68,17 @@ class TestComputeSchemaSha:
           2. Re-training of every downstream LightGBM booster.
 
         Update the literal below intentionally as part of the bump.
+
+        v3 (0.5.0): added the first-place LAFA system families
+        (classifier_score / classifier_present, self_prior_score,
+        association_total / association_cross / association_present) for the
+        lafa-integrate productisation. Additive over the lineage + interpro
+        schema; existing boosters select only their own families, so their
+        family-aware schema hash is unchanged. Previous golden (v2 / 0.4.0):
+        4390db315e76
         """
         sha = compute_schema_sha(ALL_FEATURES)
-        assert sha == "4390db315e76", (
+        assert sha == "b2a5cd46ec6b", (
             f"ALL_FEATURES sha drifted from golden: got {sha}. "
             "If this change is intended, bump protea-contracts to "
             "the next major and update this golden literal."
