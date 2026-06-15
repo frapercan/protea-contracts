@@ -74,6 +74,15 @@ class PredictGOTermsPayload(ProteaPayload, frozen=True):
     # annotations. Default off so existing boosters (trained without
     # the lineage family) continue to score bit-exact.
     compute_lineage_features: bool = False
+    # First-place LAFA system producers (lafa-integrate). Opt-in; default
+    # off so existing predictions are bit-exact. compute_classifier adds the
+    # direct full-catalogue predictor (also contributes candidates);
+    # compute_self_prior uses the query's own pre-cutoff non-experimental
+    # annotations; compute_association uses the cross-aspect conditional
+    # probability of each candidate given the protein's known pre-cutoff terms.
+    compute_classifier: bool = False
+    compute_self_prior: bool = False
+    compute_association: bool = False
 
     # Ancestor expansion of leaf GO predictions (opt-in). When enabled,
     # every leaf candidate gets its is_a / part_of ancestor closure
@@ -138,6 +147,15 @@ class PredictGOTermsBatchPayload(ProteaPayload, frozen=True):
     # annotations. Default off so bit-exact reproducibility against
     # the current lab champion (52 features, no lineage) is preserved.
     compute_lineage_features: bool = False
+    # First-place LAFA system producers (lafa-integrate). Opt-in; default
+    # off so existing predictions are bit-exact. compute_classifier adds the
+    # direct full-catalogue predictor (also contributes candidates);
+    # compute_self_prior uses the query's own pre-cutoff non-experimental
+    # annotations; compute_association uses the cross-aspect conditional
+    # probability of each candidate given the protein's known pre-cutoff terms.
+    compute_classifier: bool = False
+    compute_self_prior: bool = False
+    compute_association: bool = False
     expand_votes_to_ancestors: bool = False
     aspect_separated_knn: bool = True
 
