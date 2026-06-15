@@ -81,6 +81,19 @@ class PredictGOTermsPayload(ProteaPayload, frozen=True):
     # the 25 extra columns are persisted on every ``GOPrediction`` row.
     compute_v6_features: bool = False
 
+    # First-place LAFA system producers (lafa-integrate). Opt-in. When set,
+    # the batch worker fills the corresponding feature columns with
+    # meaningful values (otherwise zero / NaN defaults, as for v6):
+    #   compute_classifier   the direct full-catalogue predictor, which also
+    #                         contributes additional candidate terms.
+    #   compute_self_prior    the query protein's own pre-cutoff non-experimental
+    #                         annotations.
+    #   compute_association   the cross-aspect conditional probability of each
+    #                         candidate given the protein's known pre-cutoff terms.
+    compute_classifier: bool = False
+    compute_self_prior: bool = False
+    compute_association: bool = False
+
     # Ancestor expansion of leaf GO predictions (opt-in). When enabled,
     # every leaf candidate gets its is_a / part_of ancestor closure
     # synthesised as additional records, matching the candidate
@@ -137,6 +150,11 @@ class PredictGOTermsBatchPayload(ProteaPayload, frozen=True):
     compute_taxonomy: bool = True
     compute_reranker_features: bool = True
     compute_v6_features: bool = False
+    # First-place LAFA system producers (lafa-integrate). Kept in sync with
+    # PredictGOTermsPayload defaults.
+    compute_classifier: bool = False
+    compute_self_prior: bool = False
+    compute_association: bool = False
     expand_votes_to_ancestors: bool = False
     aspect_separated_knn: bool = True
 
