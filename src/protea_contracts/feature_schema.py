@@ -20,7 +20,7 @@ from protea_contracts._hashing import short_sha
 
 #: Bumping any of the constants below or this version forces a major
 #: ``protea-contracts`` release.
-SCHEMA_VERSION = "v3"
+SCHEMA_VERSION = "v4"
 
 #: Numeric features computed per (query, candidate GO term).
 #: ``k_context`` is injected at pool-stage time (not in parquet); it
@@ -108,6 +108,17 @@ NUMERIC_FEATURES: list[str] = [
     # zero apart from an absent source when pooling KNN + InterPro.
     "knn_present",
     "interpro_present",
+    # First-place LAFA system additions (lafa-integrate INT-1).
+    # Direct full-catalogue predictor: per-candidate score and a present flag.
+    "classifier_score",
+    "classifier_present",
+    # Self-prior: the query protein's own pre-cutoff non-experimental annotations.
+    "self_prior_score",
+    # Cross-aspect association: conditional probability of the candidate term given
+    # the query protein's known pre-cutoff terms (total, cross-branch-only, present).
+    "association_total",
+    "association_cross",
+    "association_present",
 ]
 
 #: Embedding-PCA projection dimensionality. Must equal the number of
@@ -214,6 +225,13 @@ FEATURE_FAMILIES: dict[str, list[str]] = {
         "knn_present",
         "interpro_present",
     ],
+    # First-place LAFA system additions (lafa-integrate INT-1). Each family is
+    # additive: existing boosters select only their own families, so their
+    # family-aware schema hash (compute_feature_schema_sha) is unchanged. Only
+    # the full ALL_FEATURES digest and SCHEMA_VERSION advance.
+    "classifier": ["classifier_score", "classifier_present"],
+    "self_prior": ["self_prior_score"],
+    "association": ["association_total", "association_cross", "association_present"],
 }
 
 #: Reserved column names: present in every parquet dump alongside the

@@ -224,6 +224,23 @@ def _simulate_dump_record(flags: dict[str, bool]) -> set[str]:
         ]
     )
 
+    # First-place LAFA system columns (lafa-integrate INT-1). Emitted
+    # unconditionally by the dump path with zero / NaN defaults when the
+    # corresponding producer is disabled, mirroring the interpro / anc2vec
+    # zero-fill pattern. The compute_classifier / compute_self_prior /
+    # compute_association payload flags toggle whether the values are
+    # meaningful, not whether the columns exist.
+    produced.update(
+        [
+            "classifier_score",
+            "classifier_present",
+            "self_prior_score",
+            "association_total",
+            "association_cross",
+            "association_present",
+        ]
+    )
+
     # Touch ``flags`` so static analysers do not flag the parameter as
     # unused; the value is intentionally ignored because every column
     # is unconditional today.

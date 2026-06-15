@@ -25,7 +25,7 @@ from protea_contracts import (
 
 class TestConstants:
     def test_schema_version(self) -> None:
-        assert SCHEMA_VERSION == "v3"
+        assert SCHEMA_VERSION == "v4"
 
     def test_label_column(self) -> None:
         assert LABEL_COLUMN == "label"
@@ -80,9 +80,16 @@ class TestComputeSchemaSha:
         interpro_score, interpro_n_signatures, six member-DB one-hots,
         plus knn_present / interpro_present presence flags) for the
         vNext InterPro reranker. Previous golden (v3 / 1.0.x): a0986dedd912
+
+        v4 (1.2.0): added the first-place LAFA system families
+        (classifier_score / classifier_present, self_prior_score,
+        association_total / association_cross / association_present) for
+        the lafa-integrate productisation. Additive: existing boosters
+        select only their own families, so their family-aware schema hash
+        is unchanged. Previous golden (v3 / 1.1.0): 8d9a1668b1a2
         """
         sha = compute_schema_sha(ALL_FEATURES)
-        assert sha == "8d9a1668b1a2", (
+        assert sha == "8cc4cabded9b", (
             f"ALL_FEATURES sha drifted from golden: got {sha}. "
             "If this change is intended, bump protea-contracts to "
             "the next major and update this golden literal."
