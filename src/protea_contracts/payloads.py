@@ -104,6 +104,16 @@ class PredictGOTermsPayload(ProteaPayload, frozen=True):
     # than crashing.
     reranker_model_id: str | None = None
 
+    # Per-category (NK / LK / PK) reranker dispatch (lafa-integrate INT-5).
+    # The first-place LAFA system trains three LightGBM boosters, one per
+    # CAFA partition. When all three are set the batch worker assigns every
+    # candidate a category from the query's pre-cutoff EXPERIMENTAL known
+    # terms and scores it with the matching booster. Default None keeps the
+    # single ``reranker_model_id`` path (no regression).
+    reranker_model_id_nk: str | None = None
+    reranker_model_id_lk: str | None = None
+    reranker_model_id_pk: str | None = None
+
     @field_validator(
         "embedding_config_id",
         "annotation_set_id",
@@ -165,6 +175,20 @@ class PredictGOTermsBatchPayload(ProteaPayload, frozen=True):
     reranker_model_id: str | None = None
     reranker_artifact_uri: str | None = None
     reranker_feature_schema_sha: str | None = None
+
+    # Per-category (NK / LK / PK) reranker dispatch (lafa-integrate INT-5).
+    # The coordinator snapshots each per-category booster's artifact_uri +
+    # feature_schema_sha so the batch worker scores without re-querying the
+    # RerankerModel rows. When all three (artifact_uri, feature_schema_sha)
+    # pairs are present the worker splits candidates by category and applies
+    # the matching booster; otherwise it falls back to the single-booster
+    # ``reranker_artifact_uri`` path (no regression).
+    reranker_nk_artifact_uri: str | None = None
+    reranker_nk_feature_schema_sha: str | None = None
+    reranker_lk_artifact_uri: str | None = None
+    reranker_lk_feature_schema_sha: str | None = None
+    reranker_pk_artifact_uri: str | None = None
+    reranker_pk_feature_schema_sha: str | None = None
 
 
 class StorePredictionsPayload(ProteaPayload, frozen=True):
