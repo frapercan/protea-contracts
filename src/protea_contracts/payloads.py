@@ -83,6 +83,13 @@ class PredictGOTermsPayload(ProteaPayload, frozen=True):
     compute_classifier: bool = False
     compute_self_prior: bool = False
     compute_association: bool = False
+    # compute_ia attaches IA(t), the snapshot-invariant information accretion of
+    # each candidate term (the go_id-keyed quantity cafaeval f_micro_w weights
+    # with), as a booster feature on the GOPrediction features JSONB blob.
+    # Default off so existing predictions stay bit-exact. ``ia_file`` overrides
+    # the IA table source (else PROTEA_IA_FEATURE_PATH env or the snapshot ia_url).
+    compute_ia: bool = False
+    ia_file: str | None = None
 
     # Ancestor expansion of leaf GO predictions (opt-in). When enabled,
     # every leaf candidate gets its is_a / part_of ancestor closure
@@ -166,6 +173,9 @@ class PredictGOTermsBatchPayload(ProteaPayload, frozen=True):
     compute_classifier: bool = False
     compute_self_prior: bool = False
     compute_association: bool = False
+    # IA information-accretion feature; kept in sync with PredictGOTermsPayload.
+    compute_ia: bool = False
+    ia_file: str | None = None
     expand_votes_to_ancestors: bool = False
     aspect_separated_knn: bool = True
 
