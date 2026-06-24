@@ -13,7 +13,7 @@ platform.
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/)
 [![License: Unlicense](https://img.shields.io/badge/license-Unlicense-blue.svg)](https://unlicense.org/)
 
-**Status:** v1.0.1, production (foundational). Every active repo in the PROTEA stack
+**Status:** v1.2.0, production (foundational). Every active repo in the PROTEA stack
 imports this package. SemVer-disciplined: any change to a payload field name, dtype,
 or `ALL_FEATURES` ordering is a breaking change that requires a major version bump
 and a coordinated upgrade across every downstream consumer.
