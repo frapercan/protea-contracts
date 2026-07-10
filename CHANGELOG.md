@@ -8,6 +8,32 @@ Because every consumer in the PROTEA stack pins this package, breaking changes
 (removed or renamed exports, payload field changes, ABC signature changes, or a
 moved `compute_schema_sha` / `axis_tuple_shortid` digest) require a major bump.
 
+## [1.3.0]
+
+### Added
+
+- `feature_docs` module: the single source of truth for what each canonical
+  feature column measures, how it is computed in words, who produces it, and
+  whether a producer runs in the default export. Exposes the frozen
+  `FeatureDoc` dataclass, the `FeatureStatus` enum (`PRODUCED`,
+  `DECLARED_ABSENT`, `POOL_INJECTED`, `BROKEN`) and the
+  `FEATURE_DOCS` mapping with one entry per column in `ALL_FEATURES` (71
+  entries). The six LAFA columns (`classifier_*`, `self_prior_score`,
+  `association_*`) are recorded as `DECLARED_ABSENT` per ADR-D45: their
+  producers exist but no producer runs in the default export, so it emits
+  `NaN`.
+- `scripts/check_feature_docs.py` drift lint (also asserted in
+  `tests/test_feature_docs.py`): fails if a declared feature lacks a
+  `FeatureDoc`, if a doc names an undeclared column, or if a doc's family
+  disagrees with `FEATURE_FAMILIES`. Wired into the `ci` workflow.
+- Sphinx reference page `reference/feature_docs` rendered at build time from
+  `FEATURE_DOCS` via a `feature-docs-table` directive, so the docs cannot
+  drift from the registry.
+
+This release is additive: no export was removed or renamed, no payload or ABC
+signature changed, and the `ALL_FEATURES` fingerprint is unchanged
+(`8cc4cabded9b`). `__all__` remains a superset of the previous surface.
+
 ## [1.1.0]
 
 ### Added
