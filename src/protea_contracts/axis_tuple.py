@@ -27,10 +27,11 @@ so any change to the formula forces a SemVer-major bump on this package.
 
 from __future__ import annotations
 
-import hashlib
 import json
 from collections.abc import Mapping
 from typing import Any
+
+from protea_contracts._hashing import short_sha
 
 #: Canonical axis-tuple key set, in human-readable order. The order here
 #: does NOT affect the digest (``json.dumps(..., sort_keys=True)``
@@ -83,7 +84,7 @@ def axis_tuple_shortid(axis_tuple: Mapping[str, Any]) -> str:
             "default; pre-stringify Path / UUID / datetime before "
             f"calling axis_tuple_shortid. underlying error: {exc}"
         ) from exc
-    return hashlib.sha256(blob).hexdigest()[:SHORTID_HEX_LEN]
+    return short_sha(blob, SHORTID_HEX_LEN)
 
 
 __all__ = [

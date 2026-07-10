@@ -16,6 +16,7 @@ from protea_contracts.contexts import (
 from protea_contracts.embedding_backend import EmbeddingBackend
 from protea_contracts.embedding_payload import EmbeddingPayload, Granularity
 from protea_contracts.experiment_runner import EvalResult, ExperimentRunner, RunResult
+from protea_contracts.feature_docs import FEATURE_DOCS, FeatureDoc, FeatureStatus
 from protea_contracts.feature_registry import Feature, FeatureDtype, FeatureRegistry
 from protea_contracts.feature_schema import (
     ALL_FEATURES,
@@ -50,13 +51,14 @@ from protea_contracts.records import (
     UniProtProteinRecord,
 )
 
-__version__ = "0.7.0"
+__version__ = "1.4.0"
 
 __all__ = [
     "ALL_FEATURES",
     "CANONICAL_AXIS_KEYS",
     "CATEGORICAL_FEATURES",
     "EMBEDDING_PCA_DIM",
+    "FEATURE_DOCS",
     "FEATURE_FAMILIES",
     "LABEL_COLUMN",
     "NUMERIC_FEATURES",
@@ -74,8 +76,10 @@ __all__ = [
     "ExportSink",
     "Feature",
     "FeatureBuildContext",
+    "FeatureDoc",
     "FeatureDtype",
     "FeatureRegistry",
+    "FeatureStatus",
     "GoaAnnotationRecord",
     "GoaStreamPayload",
     "Granularity",

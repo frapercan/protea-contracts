@@ -7,13 +7,13 @@ by the lab side (``protea-runners.lightgbm``).
 
 from __future__ import annotations
 
-import hashlib
 import json
 from pathlib import Path
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from protea_contracts._hashing import short_sha
 from protea_contracts.feature_schema import FEATURE_FAMILIES, SCHEMA_VERSION
 
 
@@ -55,7 +55,7 @@ class DatasetSpec(BaseModel):
         """
         payload = self.model_dump(exclude={"source_manifest", "name"}, mode="json")
         blob = json.dumps(payload, sort_keys=True).encode()
-        return hashlib.sha256(blob).hexdigest()[:12]
+        return short_sha(blob)
 
 
 class ManifestV1(BaseModel):
