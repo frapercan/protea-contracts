@@ -7,6 +7,7 @@ import sys
 from importlib.metadata import version as _pkg_version
 
 sys.path.insert(0, os.path.abspath("../../src"))
+sys.path.insert(0, os.path.abspath("_ext"))
 
 # ── Project info ─────────────────────────────────────────────
 project = "protea-contracts"
@@ -28,6 +29,7 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinx_copybutton",
     "sphinx_design",
+    "feature_docs_table",
 ]
 
 autosummary_generate = True

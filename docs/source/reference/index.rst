@@ -11,6 +11,7 @@ stack (no SQLAlchemy, no FastAPI, no torch).
    abc
    payloads
    schema
+   feature_docs
    axis_tuple
    records
    manifest
