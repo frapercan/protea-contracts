@@ -1,10 +1,12 @@
 protea-contracts
 ================
 
-The contract surface for the PROTEA stack: abstract base classes that
-plugin repositories implement, the canonical feature schema with its
-versioned content fingerprint, and the pydantic payloads that flow
-through the platform's queues and HTTP boundaries.
+The contract surface for the PROTEA stack: the abstract base classes
+that plugin repositories implement, the canonical feature schema with
+its versioned content fingerprint, the pydantic payloads and records
+that cross the platform's queue and HTTP boundaries, and the axis-tuple
+identity that joins the platform to the lab. Every other repository in
+the stack imports this package; nothing in it imports them.
 
 .. note::
 
@@ -12,63 +14,66 @@ through the platform's queues and HTTP boundaries.
    ``pydantic``, ``numpy`` and ``pyarrow``. It must **never** import
    ``sqlalchemy``, ``fastapi``, ``torch``, or anything from
    ``protea-core``. Downstream consumers (the lab, the runners, the
-   backends, the sources) install this package without dragging the
-   platform stack along.
+   backends, the sources, the inference path) install this package
+   without dragging the platform stack along.
+
+New here? Read :doc:`concepts` for the mental model, then
+:doc:`quickstart` to build a plugin end to end.
 
 What lives here
 ---------------
 
+The documentation follows the contract from idea to reference:
+
 .. list-table::
    :header-rows: 1
-   :widths: 28 72
+   :widths: 30 70
 
-   * - Module
-     - Role
-   * - :doc:`abcs/annotation_source`
-     - Plugin contract for annotation sources (``goa``, ``quickgo``,
-       ``uniprot``, future ``interproscan``).
-   * - :doc:`abcs/embedding_backend`
-     - Plugin contract for protein language model backends (``esm``,
-       ``t5``, ``ankh``, ``esm3c``).
-   * - :doc:`abcs/experiment_runner`
-     - Plugin contract for experiment runners (``lightgbm``, ``knn``,
-       ``baseline``, future ``gnn``, ``retrieval_neural``).
-   * - :doc:`abcs/feature_registry`
-     - Plugin contract for the per-candidate feature registry that
-       backs the re-ranker.
+   * - Section
+     - What it covers
+   * - :doc:`concepts`
+     - The mental model: why a separate contract surface, how ABCs plus
+       entry points enable the plugin architecture, and how the schema
+       fingerprint guards drift.
+   * - :doc:`quickstart`
+     - A plugin author's path from install to a registered, discoverable
+       plugin: subclass an ABC, set ``name``, expose it via entry points.
+   * - :doc:`abcs/index`
+     - The four plugin contracts (``AnnotationSource``,
+       ``EmbeddingBackend``, ``ExperimentRunner``, ``FeatureRegistry``)
+       and their operational roles.
    * - :doc:`schema`
-     - Canonical feature schema (``ALL_FEATURES``, families,
-       ``compute_schema_sha``), pydantic payloads, parquet manifest,
-       streaming records.
-
-Why a separate contracts package
---------------------------------
-
-Three reasons drove the split (master plan v3, ADR D1):
-
-1. **Plugin extensibility.** New annotation sources, embedding
-   backends and experiment runners must be addable as out-of-tree
-   contributions. Without a stable contract package each plugin would
-   re-import private symbols from ``protea-core``, recreating the
-   monolith.
-
-2. **Reproducibility.** The feature schema fingerprint
-   (``compute_schema_sha``) gates whether a re-ranker booster trained
-   yesterday can be applied today. The fingerprint must be a single
-   source of truth, not two parallel definitions in ``protea-core``
-   and the lab. Past silent drift cost one non-reproducible study run
-   (D10).
-
-3. **Inference shipping.** ``protea-method``, the pure inference
-   path, can be PyPI-published without the platform stack precisely
-   because every contract it touches lives here.
-
-Contents
---------
+     - The non-ABC half: canonical feature schema and ``schema_sha``,
+       pydantic payloads, the parquet manifest, streaming records, and
+       the axis-tuple provenance key.
+   * - :doc:`reference/index`
+     - Per-module autodoc for every public symbol.
+   * - :doc:`contributing`
+     - SemVer rules for evolving the contract without breaking every
+       consumer.
 
 .. toctree::
-   :maxdepth: 2
+   :hidden:
+   :caption: Getting started
+
+   concepts
+   quickstart
+
+.. toctree::
+   :hidden:
+   :caption: The contract model
 
    abcs/index
    schema
+
+.. toctree::
+   :hidden:
+   :caption: API reference
+
+   reference/index
+
+.. toctree::
+   :hidden:
+   :caption: Development
+
    contributing

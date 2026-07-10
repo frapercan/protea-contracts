@@ -25,7 +25,7 @@ from protea_contracts import (
 
 class TestConstants:
     def test_schema_version(self) -> None:
-        assert SCHEMA_VERSION == "v3"
+        assert SCHEMA_VERSION == "v5"
 
     def test_label_column(self) -> None:
         assert LABEL_COLUMN == "label"
@@ -69,16 +69,33 @@ class TestComputeSchemaSha:
 
         Update the literal below intentionally as part of the bump.
 
-        v3 (0.5.0): added the first-place LAFA system families
+        v3 (1.0.0): added k_context (numeric) + plm_id (categorical)
+        as pool-stage-injected features for the universal multi-PLM
+        reranker (F-RERANK-UNIVERSAL.2). Both columns are absent from
+        the raw parquet dumps and injected at stage time. See
+        FEATURE_LEAKAGE_AUDIT.md for GO/NO-GO ruling on plm_id.
+        Previous golden (v2 / 0.3.0): 145592ed186c
+
+        1.1.0: added the interpro feature family (interpro_hit,
+        interpro_score, interpro_n_signatures, six member-DB one-hots,
+        plus knn_present / interpro_present presence flags) for the
+        vNext InterPro reranker. Previous golden (v3 / 1.0.x): a0986dedd912
+
+        v4 (1.2.0): added the first-place LAFA system families
         (classifier_score / classifier_present, self_prior_score,
-        association_total / association_cross / association_present) for the
-        lafa-integrate productisation. Additive over the lineage + interpro
-        schema; existing boosters select only their own families, so their
-        family-aware schema hash is unchanged. Previous golden (v2 / 0.4.0):
-        4390db315e76
+        association_total / association_cross / association_present) for
+        the lafa-integrate productisation. Additive: existing boosters
+        select only their own families, so their family-aware schema hash
+        is unchanged. Previous golden (v3 / 1.1.0): 8d9a1668b1a2
+
+        v5 (1.4.0): reconciles the forked main and develop schemas. The
+        lineage family (four columns, main-only since 0.4.0) and the
+        pool-injected k_context / plm_id (develop-only) now coexist, giving
+        75 columns. Previous goldens: b2a5cd46ec6b on main (73 columns),
+        8cc4cabded9b on develop (71 columns).
         """
         sha = compute_schema_sha(ALL_FEATURES)
-        assert sha == "b2a5cd46ec6b", (
+        assert sha == "4e2c515273d3", (
             f"ALL_FEATURES sha drifted from golden: got {sha}. "
             "If this change is intended, bump protea-contracts to "
             "the next major and update this golden literal."

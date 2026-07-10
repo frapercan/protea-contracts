@@ -1,0 +1,33 @@
+name: Docs
+
+on:
+  push:
+    branches: [develop, master, main]
+  pull_request:
+  workflow_dispatch:
+
+# Docs are hosted on Read the Docs (see .readthedocs.yaml). This workflow is a
+# quality gate only: it compiles the Sphinx tree with warnings-as-errors so a
+# broken docs build fails CI. No publishing happens here.
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install poetry
+        run: pipx install poetry
+
+      - name: Install dependencies (docs group)
+        run: poetry install --with docs
+
+      - name: Build HTML (warnings are errors)
+        run: poetry run sphinx-build -b html -W --keep-going docs/source docs/_build/html

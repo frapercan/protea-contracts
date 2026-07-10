@@ -2,9 +2,8 @@ AnnotationSource
 ================
 
 Contract for annotation source plugins. Implementations live in
-``protea-sources`` (``goa``, ``quickgo``, ``uniprot``, future
-``interproscan``) and register through the ``protea.sources``
-``entry_points`` group.
+``protea-sources`` (``goa``, ``quickgo``, ``uniprot``, ``interpro``)
+and register through the ``protea.sources`` ``entry_points`` group.
 
 Operational role
 ----------------

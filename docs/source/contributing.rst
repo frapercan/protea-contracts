@@ -9,17 +9,18 @@ SemVer-significant change here ripples through every consumer
 SemVer policy
 -------------
 
-- **Patch (``0.x.y``)**: docstrings, type-hint refinements that do
+- **Patch (``x.y.Z``)**: docstrings, type-hint refinements that do
   not change runtime behaviour, internal helpers.
-- **Minor (``0.x.0``)**: new pydantic fields with a default, new
+- **Minor (``x.Y.0``)**: new pydantic fields with a default, new
   optional ABC method, new feature added to ``ALL_FEATURES`` (changes
-  the schema sha — boosters retrain).
-- **Major (``x.0.0``)**: removed pydantic fields, renamed feature
+  the schema sha, so boosters retrain).
+- **Major (``X.0.0``)**: removed pydantic fields, renamed feature
   names, ABC method signature changes, removed re-export.
 
-Because ``protea-contracts`` is at version ``0.x``, every minor bump
-is technically allowed to break consumers. In practice we treat minor
-bumps as compatible and force majors for any breaking change.
+The package is past ``1.0``, so SemVer applies strictly: a minor bump
+is a compatibility promise and any breaking change forces a major.
+The public surface (re-exports in ``__all__``, ``CANONICAL_AXIS_KEYS``,
+payload field names, ABC method shapes) is frozen within a major line.
 
 Adding a feature to ``ALL_FEATURES``
 ------------------------------------
@@ -27,7 +28,7 @@ Adding a feature to ``ALL_FEATURES``
 The schema sha is byte-stable across re-orderings (the implementation
 sorts before hashing). Adding a feature still changes the digest
 because the sorted list is longer. Every booster trained against the
-old digest will refuse to load against the new one — that is the
+old digest will refuse to load against the new one. That is the
 intended behaviour.
 
 Procedure:
@@ -37,7 +38,7 @@ Procedure:
    ``CATEGORICAL_FEATURES``) and to ``FEATURE_FAMILIES``.
 2. Update the golden test that pins the canonical sha to the new
    value (``tests/test_feature_schema.py``).
-3. Bump the package version (minor: ``0.1.0`` -> ``0.2.0``).
+3. Bump the package minor version (e.g. ``1.0.1`` to ``1.1.0``).
 4. In ``protea-core``: add the matching feature to the registry,
    update the parity test ``test_feature_contract.py`` and re-run the
    golden parquet bit-exact test.
@@ -61,7 +62,7 @@ on V2.
 Adding a payload field
 ----------------------
 
-Pydantic v2 makes optional fields with a default cheap. Add a field
+Pydantic makes optional fields with a default cheap. Add a field
 with ``Optional[T] = None``, document the semantics, bump minor. Old
 clients keep working.
 

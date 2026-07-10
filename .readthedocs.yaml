@@ -1,0 +1,22 @@
+# Read the Docs build configuration for protea-contracts.
+# Hosting moved from GitHub Pages to Read the Docs (versioned docs + PR previews).
+# CI still runs sphinx-build -W as a quality gate (see .github/workflows/docs.yml).
+version: 2
+
+build:
+  os: ubuntu-22.04
+  tools:
+    python: "3.12"
+  jobs:
+    # Reuse the same Poetry "docs" group the package and CI already declare,
+    # so the RTD dependency set never drifts from local builds.
+    post_create_environment:
+      - pip install poetry
+    install:
+      # Install the package itself plus the docs group into the RTD virtualenv
+      # so autodoc can import protea_contracts and its runtime deps.
+      - VIRTUAL_ENV=$READTHEDOCS_VIRTUALENV_PATH poetry install --with docs
+
+sphinx:
+  configuration: docs/source/conf.py
+  fail_on_warning: true

@@ -20,6 +20,18 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 PositiveInt = Annotated[int, Field(gt=0)]
 
 
+def _require_non_empty_str(value: str, label: str) -> str:
+    """Validate that ``value`` is a non-empty, non-whitespace string.
+
+    Shared by the ``field_validator`` hooks below so the "stringy id"
+    rule lives in one place. Returns the stripped value; raises
+    ``ValueError`` otherwise.
+    """
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{label} must be a non-empty string")
+    return value.strip()
+
+
 class ProteaPayload(BaseModel):
     """Immutable, strictly-typed base class for all operation payloads.
 
@@ -74,12 +86,15 @@ class PredictGOTermsPayload(ProteaPayload, frozen=True):
     # annotations. Default off so existing boosters (trained without
     # the lineage family) continue to score bit-exact.
     compute_lineage_features: bool = False
-    # First-place LAFA system producers (lafa-integrate). Opt-in; default
-    # off so existing predictions are bit-exact. compute_classifier adds the
-    # direct full-catalogue predictor (also contributes candidates);
-    # compute_self_prior uses the query's own pre-cutoff non-experimental
-    # annotations; compute_association uses the cross-aspect conditional
-    # probability of each candidate given the protein's known pre-cutoff terms.
+    # First-place LAFA system producers (lafa-integrate). Opt-in. When set,
+    # the batch worker fills the corresponding feature columns with
+    # meaningful values; otherwise the export emits NaN (ADR-D45):
+    #   compute_classifier    the direct full-catalogue predictor, which also
+    #                         contributes additional candidate terms.
+    #   compute_self_prior    the query protein's own pre-cutoff non-experimental
+    #                         annotations.
+    #   compute_association   the cross-aspect conditional probability of each
+    #                         candidate given the protein's known pre-cutoff terms.
     compute_classifier: bool = False
     compute_self_prior: bool = False
     compute_association: bool = False
@@ -129,9 +144,7 @@ class PredictGOTermsPayload(ProteaPayload, frozen=True):
     )
     @classmethod
     def must_be_non_empty(cls, v: str) -> str:
-        if not isinstance(v, str) or not v.strip():
-            raise ValueError("must be a non-empty string")
-        return v.strip()
+        return _require_non_empty_str(v, "value")
 
 
 class PredictGOTermsBatchPayload(ProteaPayload, frozen=True):
@@ -159,20 +172,16 @@ class PredictGOTermsBatchPayload(ProteaPayload, frozen=True):
     compute_taxonomy: bool = True
     compute_reranker_features: bool = True
     compute_v6_features: bool = False
+    # First-place LAFA system producers (lafa-integrate). Kept in sync with
+    # PredictGOTermsPayload defaults.
+    compute_classifier: bool = False
+    compute_self_prior: bool = False
+    compute_association: bool = False
     # Lineage features (4 columns) describing the GO-DAG relation
     # between each candidate term and the query's pre-cutoff known
     # annotations. Default off so bit-exact reproducibility against
     # the current lab champion (52 features, no lineage) is preserved.
     compute_lineage_features: bool = False
-    # First-place LAFA system producers (lafa-integrate). Opt-in; default
-    # off so existing predictions are bit-exact. compute_classifier adds the
-    # direct full-catalogue predictor (also contributes candidates);
-    # compute_self_prior uses the query's own pre-cutoff non-experimental
-    # annotations; compute_association uses the cross-aspect conditional
-    # probability of each candidate given the protein's known pre-cutoff terms.
-    compute_classifier: bool = False
-    compute_self_prior: bool = False
-    compute_association: bool = False
     # IA information-accretion feature; kept in sync with PredictGOTermsPayload.
     compute_ia: bool = False
     ia_file: str | None = None
@@ -251,6 +260,4 @@ class RerankerSpec(BaseModel):
     @field_validator("runner", mode="before")
     @classmethod
     def must_be_non_empty(cls, v: str) -> str:
-        if not isinstance(v, str) or not v.strip():
-            raise ValueError("runner must be a non-empty string")
-        return v.strip()
+        return _require_non_empty_str(v, "runner")

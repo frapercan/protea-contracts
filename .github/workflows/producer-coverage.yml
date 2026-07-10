@@ -1,0 +1,48 @@
+name: producer-coverage
+
+# FARM-1.10 guard. Fails the PR fast when a new column lands in
+# `ALL_FEATURES` without an unconditional producer wired in the dump
+# path. Failure mode: 1-second CI red on the contracts PR, rather
+# than a 5-hour LB.1 KNN compute that crashes at the parquet_export
+# canonical-column invariant.
+#
+# Path filter keeps this workflow off PRs that do not touch the
+# canonical surface. After this workflow stabilises in main CI,
+# add `producer-coverage / coverage` to the required-status-checks
+# context list on the `develop` branch protection so a missing or
+# skipped run blocks merge.
+
+on:
+  pull_request:
+    paths:
+      - "src/protea_contracts/feature_schema.py"
+      - "src/protea_contracts/__init__.py"
+      - "src/protea_contracts/payloads.py"
+      - "tests/test_feature_producer_coverage.py"
+      - ".github/workflows/producer-coverage.yml"
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - "src/protea_contracts/feature_schema.py"
+      - "src/protea_contracts/__init__.py"
+      - "src/protea_contracts/payloads.py"
+      - "tests/test_feature_producer_coverage.py"
+      - ".github/workflows/producer-coverage.yml"
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install poetry
+        run: pipx install poetry
+      - name: Install dependencies (main + dev)
+        run: poetry install --with dev
+      - name: Run producer-coverage test
+        run: poetry run pytest tests/test_feature_producer_coverage.py -xvs
