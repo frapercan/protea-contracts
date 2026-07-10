@@ -116,6 +116,7 @@ class FeatureDoc:
 # Dotted-path shorthands used repeatedly below.
 _LEAF = "protea.core._leaf_record_builder._LeafRecordBuilder"
 _FENG = "protea.core.feature_engineering"
+_LIN = "protea_method.lineage.compute_lineage_features"
 
 _DOCS: list[FeatureDoc] = [
     # ── KNN retrieval + reranker aggregates (family "knn") ──────────────────
@@ -967,6 +968,87 @@ _DOCS: list[FeatureDoc] = [
         status=FeatureStatus.POOL_INJECTED,
         unit="neighbours",
         value_range="bare count, positive",
+    ),
+    FeatureDoc(
+        name="lineage_is_ancestor_of_known",
+        family="lineage",
+        summary=(
+            "Whether the candidate GO term is an ancestor of at least one term "
+            "the protein is already known to have."
+        ),
+        definition=(
+            "1.0 when the candidate appears in the is_a / part_of ancestor "
+            "closure of any pre-cutoff known term of the query protein, else "
+            "0.0. A candidate identical to a known term does not count as its "
+            "own ancestor: the self-overlap is subtracted before the test. A "
+            "protein with no known terms scores 0.0, a true absence rather "
+            "than a missing measurement, so this feature is identically zero "
+            "across the no-knowledge evaluation cell."
+        ),
+        producer=_LIN,
+        status=FeatureStatus.PRODUCED,
+        unit="indicator",
+        value_range="0.0 or 1.0",
+        notes=(
+            "Opt-in through the compute_lineage_features payload flag. In the "
+            "sealed v227 to v230 champion it is the second most important "
+            "feature of the previously-known cell by LightGBM gain, and the "
+            "third overall, while contributing exactly zero in the "
+            "no-knowledge cell, where by construction there is nothing to be "
+            "an ancestor of."
+        ),
+    ),
+    FeatureDoc(
+        name="lineage_is_descendant_of_known",
+        family="lineage",
+        summary=(
+            "Whether the candidate GO term is a descendant of at least one term "
+            "the protein is already known to have."
+        ),
+        definition=(
+            "1.0 when any pre-cutoff known term of the query protein appears in "
+            "the candidate's own ancestor closure, else 0.0. Self-overlap is "
+            "subtracted, so a candidate equal to a known term scores 0.0. A "
+            "protein with no known terms scores 0.0."
+        ),
+        producer=_LIN,
+        status=FeatureStatus.PRODUCED,
+        unit="indicator",
+        value_range="0.0 or 1.0",
+    ),
+    FeatureDoc(
+        name="lineage_ancestor_of_count",
+        family="lineage",
+        summary=(
+            "How many of the protein's known terms have this candidate among "
+            "their ancestors."
+        ),
+        definition=(
+            "Number of pre-cutoff known terms whose ancestor closure contains "
+            "the candidate, minus one when the candidate is itself a known "
+            "term. The graded counterpart of lineage_is_ancestor_of_known."
+        ),
+        producer=_LIN,
+        status=FeatureStatus.PRODUCED,
+        unit="known terms",
+        value_range="bare count, 0 upward, bounded by the known-term count",
+    ),
+    FeatureDoc(
+        name="lineage_descendant_of_count",
+        family="lineage",
+        summary=(
+            "How many of the protein's known terms are ancestors of this "
+            "candidate."
+        ),
+        definition=(
+            "Number of pre-cutoff known terms present in the candidate's "
+            "ancestor closure, minus one when the candidate is itself a known "
+            "term. The graded counterpart of lineage_is_descendant_of_known."
+        ),
+        producer=_LIN,
+        status=FeatureStatus.PRODUCED,
+        unit="known terms",
+        value_range="bare count, 0 upward, bounded by the known-term count",
     ),
 ]
 

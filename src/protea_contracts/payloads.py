@@ -81,10 +81,15 @@ class PredictGOTermsPayload(ProteaPayload, frozen=True):
     # the 25 extra columns are persisted on every ``GOPrediction`` row.
     compute_v6_features: bool = False
 
+    # Lineage features (4 columns) describing the GO-DAG relation
+    # between each candidate term and the query's pre-cutoff known
+    # annotations. Default off so existing boosters (trained without
+    # the lineage family) continue to score bit-exact.
+    compute_lineage_features: bool = False
     # First-place LAFA system producers (lafa-integrate). Opt-in. When set,
     # the batch worker fills the corresponding feature columns with
-    # meaningful values (otherwise zero / NaN defaults, as for v6):
-    #   compute_classifier   the direct full-catalogue predictor, which also
+    # meaningful values; otherwise the export emits NaN (ADR-D45):
+    #   compute_classifier    the direct full-catalogue predictor, which also
     #                         contributes additional candidate terms.
     #   compute_self_prior    the query protein's own pre-cutoff non-experimental
     #                         annotations.
@@ -93,6 +98,13 @@ class PredictGOTermsPayload(ProteaPayload, frozen=True):
     compute_classifier: bool = False
     compute_self_prior: bool = False
     compute_association: bool = False
+    # compute_ia attaches IA(t), the snapshot-invariant information accretion of
+    # each candidate term (the go_id-keyed quantity cafaeval f_micro_w weights
+    # with), as a booster feature on the GOPrediction features JSONB blob.
+    # Default off so existing predictions stay bit-exact. ``ia_file`` overrides
+    # the IA table source (else PROTEA_IA_FEATURE_PATH env or the snapshot ia_url).
+    compute_ia: bool = False
+    ia_file: str | None = None
 
     # Ancestor expansion of leaf GO predictions (opt-in). When enabled,
     # every leaf candidate gets its is_a / part_of ancestor closure
@@ -113,6 +125,16 @@ class PredictGOTermsPayload(ProteaPayload, frozen=True):
     # feature set; mismatch degrades to KNN-distance ordering rather
     # than crashing.
     reranker_model_id: str | None = None
+
+    # Per-category (NK / LK / PK) reranker dispatch (lafa-integrate INT-5).
+    # The first-place LAFA system trains three LightGBM boosters, one per
+    # CAFA partition. When all three are set the batch worker assigns every
+    # candidate a category from the query's pre-cutoff EXPERIMENTAL known
+    # terms and scores it with the matching booster. Default None keeps the
+    # single ``reranker_model_id`` path (no regression).
+    reranker_model_id_nk: str | None = None
+    reranker_model_id_lk: str | None = None
+    reranker_model_id_pk: str | None = None
 
     @field_validator(
         "embedding_config_id",
@@ -155,6 +177,14 @@ class PredictGOTermsBatchPayload(ProteaPayload, frozen=True):
     compute_classifier: bool = False
     compute_self_prior: bool = False
     compute_association: bool = False
+    # Lineage features (4 columns) describing the GO-DAG relation
+    # between each candidate term and the query's pre-cutoff known
+    # annotations. Default off so bit-exact reproducibility against
+    # the current lab champion (52 features, no lineage) is preserved.
+    compute_lineage_features: bool = False
+    # IA information-accretion feature; kept in sync with PredictGOTermsPayload.
+    compute_ia: bool = False
+    ia_file: str | None = None
     expand_votes_to_ancestors: bool = False
     aspect_separated_knn: bool = True
 
@@ -164,6 +194,20 @@ class PredictGOTermsBatchPayload(ProteaPayload, frozen=True):
     reranker_model_id: str | None = None
     reranker_artifact_uri: str | None = None
     reranker_feature_schema_sha: str | None = None
+
+    # Per-category (NK / LK / PK) reranker dispatch (lafa-integrate INT-5).
+    # The coordinator snapshots each per-category booster's artifact_uri +
+    # feature_schema_sha so the batch worker scores without re-querying the
+    # RerankerModel rows. When all three (artifact_uri, feature_schema_sha)
+    # pairs are present the worker splits candidates by category and applies
+    # the matching booster; otherwise it falls back to the single-booster
+    # ``reranker_artifact_uri`` path (no regression).
+    reranker_nk_artifact_uri: str | None = None
+    reranker_nk_feature_schema_sha: str | None = None
+    reranker_lk_artifact_uri: str | None = None
+    reranker_lk_feature_schema_sha: str | None = None
+    reranker_pk_artifact_uri: str | None = None
+    reranker_pk_feature_schema_sha: str | None = None
 
 
 class StorePredictionsPayload(ProteaPayload, frozen=True):
