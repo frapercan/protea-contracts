@@ -25,7 +25,7 @@ from protea_contracts import (
 
 class TestConstants:
     def test_schema_version(self) -> None:
-        assert SCHEMA_VERSION == "v4"
+        assert SCHEMA_VERSION == "v5"
 
     def test_label_column(self) -> None:
         assert LABEL_COLUMN == "label"
@@ -87,9 +87,15 @@ class TestComputeSchemaSha:
         the lafa-integrate productisation. Additive: existing boosters
         select only their own families, so their family-aware schema hash
         is unchanged. Previous golden (v3 / 1.1.0): 8d9a1668b1a2
+
+        v5 (1.4.0): reconciles the forked main and develop schemas. The
+        lineage family (four columns, main-only since 0.4.0) and the
+        pool-injected k_context / plm_id (develop-only) now coexist, giving
+        75 columns. Previous goldens: b2a5cd46ec6b on main (73 columns),
+        8cc4cabded9b on develop (71 columns).
         """
         sha = compute_schema_sha(ALL_FEATURES)
-        assert sha == "8cc4cabded9b", (
+        assert sha == "4e2c515273d3", (
             f"ALL_FEATURES sha drifted from golden: got {sha}. "
             "If this change is intended, bump protea-contracts to "
             "the next major and update this golden literal."

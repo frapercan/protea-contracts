@@ -20,7 +20,7 @@ from protea_contracts._hashing import short_sha
 
 #: Bumping any of the constants below or this version forces a major
 #: ``protea-contracts`` release.
-SCHEMA_VERSION = "v4"
+SCHEMA_VERSION = "v5"
 
 #: Numeric features computed per (query, candidate GO term).
 #: ``k_context`` is injected at pool-stage time (not in parquet); it
@@ -89,6 +89,15 @@ NUMERIC_FEATURES: list[str] = [
     "emb_pca_query_13",
     "emb_pca_query_14",
     "emb_pca_query_15",
+    # Lineage (GO-DAG relation between candidate and the query's
+    # pre-cutoff known annotations). Provided by
+    # ``protea_method.lineage.compute_lineage_features``. Opt-in via
+    # the ``compute_lineage_features`` payload flag; existing
+    # boosters that did not train on the family ignore these columns.
+    "lineage_is_ancestor_of_known",
+    "lineage_is_descendant_of_known",
+    "lineage_ancestor_of_count",
+    "lineage_descendant_of_count",
     # InterPro signature->GO mapping features. Computed per
     # (query protein, candidate GO term) from the InterPro member-DB
     # signatures that map onto the candidate term. Bool/int/float are
@@ -108,7 +117,7 @@ NUMERIC_FEATURES: list[str] = [
     # zero apart from an absent source when pooling KNN + InterPro.
     "knn_present",
     "interpro_present",
-    # First-place LAFA system additions (lafa-integrate INT-1).
+    # First-place LAFA system additions (lafa-integrate).
     # Direct full-catalogue predictor: per-candidate score and a present flag.
     "classifier_score",
     "classifier_present",
@@ -199,6 +208,12 @@ FEATURE_FAMILIES: dict[str, list[str]] = {
         "anc2vec_query_known_count",
     ],
     "emb_pca": [f"emb_pca_query_{i}" for i in range(EMBEDDING_PCA_DIM)],
+    "lineage": [
+        "lineage_is_ancestor_of_known",
+        "lineage_is_descendant_of_known",
+        "lineage_ancestor_of_count",
+        "lineage_descendant_of_count",
+    ],
     "annotation_meta": ["qualifier", "evidence_code", "aspect"],
     # Multi-source pooling context features (v3+).
     # plm_id: which PLM produced the embeddings used for KNN retrieval.
@@ -225,10 +240,10 @@ FEATURE_FAMILIES: dict[str, list[str]] = {
         "knn_present",
         "interpro_present",
     ],
-    # First-place LAFA system additions (lafa-integrate INT-1). Each family is
-    # additive: existing boosters select only their own families, so their
-    # family-aware schema hash (compute_feature_schema_sha) is unchanged. Only
-    # the full ALL_FEATURES digest and SCHEMA_VERSION advance.
+    # First-place LAFA system additions (lafa-integrate). Additive: existing
+    # boosters select only their own families, so their family-aware schema hash
+    # (compute_feature_schema_sha) is unchanged. Only the full ALL_FEATURES digest
+    # and SCHEMA_VERSION advance. lineage_* and interpro_* are preserved.
     "classifier": ["classifier_score", "classifier_present"],
     "self_prior": ["self_prior_score"],
     "association": ["association_total", "association_cross", "association_present"],

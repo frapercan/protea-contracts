@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "protea-contracts"
-version = "1.3.0"
+version = "1.4.0"
 description = "Shared ABCs, payload schemas, feature registry contract and compute_schema_sha helper for the PROTEA stack."
 authors = ["Francisco Miguel Pérez Canales <frapercan1@alum.us.es>"]
 license = "Unlicense"
