@@ -51,7 +51,7 @@ from protea_contracts.records import (
     UniProtProteinRecord,
 )
 
-__version__ = "1.4.0"
+__version__ = "1.5.0"
 
 __all__ = [
     "ALL_FEATURES",
