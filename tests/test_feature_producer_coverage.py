@@ -241,6 +241,19 @@ def _simulate_dump_record(flags: dict[str, bool]) -> set[str]:
         ]
     )
 
+    # ProtST text-to-GO transfer columns (protst-text lever). Emitted
+    # unconditionally by the dump path with NaN defaults when the
+    # compute_protst producer is disabled, mirroring the LAFA / interpro
+    # zero-fill pattern. The compute_protst payload flag toggles whether the
+    # values are meaningful, not whether the columns exist.
+    produced.update(
+        [
+            "protst_text_score",
+            "protst_vote_fraction",
+            "protst_present",
+        ]
+    )
+
     # Touch ``flags`` so static analysers do not flag the parameter as
     # unused; the value is intentionally ignored because every column
     # is unconditional today.
