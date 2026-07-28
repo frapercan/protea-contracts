@@ -1,0 +1,77 @@
+name: schema-fork-guard
+
+# The feature contract must mean one thing across the whole stack. The two
+# long-lived branches diverged once and stayed diverged, and the cost was that
+# a consumer's schema fingerprint depended on which branch it happened to
+# resolve. This job compares the schema identity of the pull request against
+# the other branch and fails when they disagree, so a divergence has to be
+# deliberate and explained rather than silent.
+
+on:
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Compare schema identity against the other branch
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+
+          if [ "${BASE_REF}" = "main" ]; then
+            OTHER=develop
+          else
+            OTHER=main
+          fi
+          echo "This pull request targets ${BASE_REF}; comparing against ${OTHER}."
+
+          # Extract each ref's package into a scratch directory and read its
+          # identity there, so neither side has to be installed.
+          #
+          # The reader always comes from THIS pull request while only the
+          # package under test comes from the ref. Taking the reader from the
+          # ref would fail the first time it is introduced, since the other
+          # branch does not have it yet, and more importantly it would mean
+          # each side was measured by a different instrument.
+          READER="${GITHUB_WORKSPACE}/scripts/schema_identity.py"
+
+          read_identity() {
+            local ref="$1"
+            local dir
+            dir="$(mktemp -d)"
+            git archive "${ref}" src/protea_contracts | tar -x -C "${dir}"
+            PYTHONPATH="${dir}/src" python "${READER}"
+          }
+
+          HERE="$(read_identity HEAD)"
+          THERE="$(read_identity "origin/${OTHER}")"
+
+          echo "  this pull request : ${HERE}"
+          echo "  ${OTHER} branch    : ${THERE}"
+
+          if [ "${HERE}" != "${THERE}" ]; then
+            echo ""
+            echo "The feature contract would differ between the two branches."
+            echo "Compared: schema version, column count, digest."
+            echo ""
+            echo "A contract that means two things is the defect this guard"
+            echo "exists to prevent. A consumer's fingerprint then depends on"
+            echo "which branch it resolved, and no result is comparable across"
+            echo "the stack. Land the same schema on both branches, or make the"
+            echo "divergence deliberate by updating this guard in the same pull"
+            echo "request with the reason."
+            exit 1
+          fi
+
+          echo "Schema identity matches across branches."
