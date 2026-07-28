@@ -1,13 +1,71 @@
-name: Co-author guard
-
-# Server-side guard against Claude / Anthropic / AI-attribution
-# commit-message trailers. Invokes the reusable workflow in
-# frapercan/agent-farm. See FARM-1.1a in the farm-platform plan.
-
+name: coauthor-guard
 on:
   pull_request:
-    branches: [main, develop]
-
+    types: [opened, synchronize, reopened]
 jobs:
-  coauthor-guard:
-    uses: frapercan/agent-farm/.github/workflows/coauthor-guard.yml@main
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Fetch base commit and the long-lived branches
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --depth=200 origin "${BASE_SHA}"
+          # Needed to tell new work apart from history that is already merged.
+          git fetch --no-tags origin main develop || true
+
+      - name: Scan new commit messages for forbidden attribution
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+
+          # Scan only commits this pull request introduces, excluding anything
+          # already reachable from a long-lived branch.
+          #
+          # Without the exclusion, any pull request that merges one branch into
+          # the other re-flags every historical commit it carries across, and
+          # the only way to pass would be rewriting history that the project
+          # has deliberately decided to keep. The guard exists to stop new
+          # attribution from landing, and that is what it now scans.
+          EXCLUDE=""
+          for ref in origin/main origin/develop; do
+            if git rev-parse --verify --quiet "${ref}" >/dev/null; then
+              EXCLUDE="${EXCLUDE} ^${ref}"
+            fi
+          done
+
+          echo "Scanning ${BASE_SHA}..${HEAD_SHA}, excluding:${EXCLUDE:- nothing}"
+          tmp="$(mktemp)"
+          # shellcheck disable=SC2086
+          git log --format='commit %H%n%B%n---END---' "${BASE_SHA}..${HEAD_SHA}" ${EXCLUDE} > "${tmp}"
+
+          count="$(grep -c '^commit ' "${tmp}" || true)"
+          echo "New commits under scan: ${count}"
+
+          pattern='co-authored-by:[[:space:]]*.*(claude|anthropic|noreply@anthropic)|generated[[:space:]]+with[[:space:]]+\[?claude|generated[[:space:]]+by[[:space:]]+\[?anthropic'
+          if grep -iEn "${pattern}" "${tmp}"; then
+            echo "ERROR: a commit introduced by this pull request contains forbidden attribution."
+            echo "Fix: reword the offending commit and force-push this branch."
+            echo "Note: history already merged on main or develop is out of scope here."
+            exit 1
+          fi
+          echo "OK: no forbidden attribution in the commits this pull request introduces."
+
+      - name: Scan PR body for forbidden attribution
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          set -euo pipefail
+          if printf '%s' "${PR_BODY:-}" | grep -iE "(co-authored-by:[[:space:]]*.*(claude|anthropic)|generated[[:space:]]+with[[:space:]]+claude|generated[[:space:]]+by[[:space:]]+anthropic)" > /dev/null; then
+            echo "::error::PR body contains Claude/Anthropic co-author mention."
+            exit 1
+          fi
+          echo "OK: no forbidden attribution found in PR body."
