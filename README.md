@@ -13,10 +13,25 @@ platform.
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/)
 [![License: Unlicense](https://img.shields.io/badge/license-Unlicense-blue.svg)](https://unlicense.org/)
 
-**Status:** v1.2.0, production (foundational). Every active repo in the PROTEA stack
-imports this package. SemVer-disciplined: any change to a payload field name, dtype,
-or `ALL_FEATURES` ordering is a breaking change that requires a major version bump
-and a coordinated upgrade across every downstream consumer.
+**Status:** foundational and in use. Every active repository in the PROTEA stack
+imports this package.
+
+It has **one long-lived branch**. It had two, and they forked: the same contract
+meant different things depending on which side a consumer resolved, and the
+platform could not import a newly added type at all. The branches were
+reconciled by a merge rather than a tree snapshot, so the history converges
+instead of drifting, and a check now compares schema identity if a second
+long-lived branch ever appears.
+
+Any change to a payload field name, a dtype, or the feature ordering is a
+breaking change and needs a coordinated upgrade across every consumer.
+Every internal dependency in this stack now names a commit rather than a
+branch, checked on each pull request. Updating one is a pull request here that
+moves the commit, gated by this repository's own checks.
+
+A definitive campaign run is being prepared for the doctoral thesis, and
+earlier experimental results are being recomputed rather than carried forward.
+No headline number is quoted in this file as current.
 
 ---
 
