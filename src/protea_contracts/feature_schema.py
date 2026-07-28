@@ -20,7 +20,7 @@ from protea_contracts._hashing import short_sha
 
 #: Bumping any of the constants below or this version forces a major
 #: ``protea-contracts`` release.
-SCHEMA_VERSION = "v5"
+SCHEMA_VERSION = "v6"
 
 #: Numeric features computed per (query, candidate GO term).
 #: ``k_context`` is injected at pool-stage time (not in parquet); it
@@ -128,6 +128,13 @@ NUMERIC_FEATURES: list[str] = [
     "association_total",
     "association_cross",
     "association_present",
+    # ProtST text-to-GO transfer (protst-text lever). Precomputed cosine
+    # kNN vote of the query's ProtST protein embedding over the reference
+    # bank, stamped per (query protein, candidate GO term). Float; NaN when
+    # no producer ran (D45 native-missing convention).
+    "protst_text_score",
+    "protst_vote_fraction",
+    "protst_present",
 ]
 
 #: Embedding-PCA projection dimensionality. Must equal the number of
@@ -247,6 +254,14 @@ FEATURE_FAMILIES: dict[str, list[str]] = {
     "classifier": ["classifier_score", "classifier_present"],
     "self_prior": ["self_prior_score"],
     "association": ["association_total", "association_cross", "association_present"],
+    # ProtST text-to-GO transfer family (protst-text lever). Additive, same
+    # as the LAFA families above: existing boosters select only their own
+    # families, so their family-aware schema hash is unchanged; only the full
+    # ALL_FEATURES digest and SCHEMA_VERSION advance. The score/vote_fraction/
+    # present triple mirrors the interpro family (a measured value, a coverage
+    # feature, and a presence flag distinguishing a true zero from an absent
+    # source).
+    "protst_text": ["protst_text_score", "protst_vote_fraction", "protst_present"],
 }
 
 #: Reserved column names: present in every parquet dump alongside the
