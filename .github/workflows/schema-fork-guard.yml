@@ -23,6 +23,15 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Install what the schema module imports
+        run: |
+          set -euo pipefail
+          # The schema module is not import-free: reading it pulls the numeric
+          # stack in. An earlier version of this job assumed otherwise and
+          # failed on the import rather than on a real disagreement.
+          python -m pip install --quiet --upgrade pip
+          python -m pip install --quiet numpy
+
       - name: Compare schema identity against the other branch
         env:
           BASE_REF: ${{ github.base_ref }}
