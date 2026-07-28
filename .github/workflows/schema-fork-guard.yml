@@ -49,6 +49,22 @@ jobs:
           else
             OTHER=main
           fi
+
+          # This repository now has a single long-lived branch. There is
+          # nothing to compare against, and that is the point: a contract that
+          # cannot fork is better than one that forks and gets caught.
+          #
+          # The guard stays wired rather than deleted, so it becomes a tripwire.
+          # If a second long-lived branch is ever created, the comparison starts
+          # running again on its own and a divergence has to be deliberate.
+          # Deleting it would mean the next person to branch gets no warning at
+          # all.
+          if ! git rev-parse --verify --quiet "origin/${OTHER}" >/dev/null; then
+            echo "No ${OTHER} branch exists, so the contract cannot mean two"
+            echo "things. Nothing to compare."
+            exit 0
+          fi
+
           echo "This pull request targets ${BASE_REF}; comparing against ${OTHER}."
 
           # Extract each ref's package into a scratch directory and read its
