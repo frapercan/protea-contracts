@@ -43,6 +43,73 @@ class ProteaPayload(BaseModel):
     model_config = ConfigDict(strict=True, frozen=True)
 
 
+class DonorPolicy(ProteaPayload, frozen=True):
+    """Which proteins may donate annotations to a query.
+
+    Until this existed the donor pool was defined only as "has a
+    representation under this configuration" and "has some annotation in
+    this set". Nothing restricted it by review status or by evidence, and
+    nothing recorded which donor a candidate came from, so the moment an
+    unreviewed corpus is represented under the same configuration it joins
+    every pool silently and the split between a scale claim and a directed
+    mining claim stops being measurable.
+
+    Every field defaults to the historical behaviour, so a payload that does
+    not mention a policy behaves exactly as before.
+
+    ``exclude_reference_prefixes`` is the subtle one. A large share of
+    unreviewed annotation is itself derived from sequence similarity, so
+    transferring it through a similarity neighbourhood restates a prediction
+    as evidence, and the domain-signature channel is already credited
+    separately elsewhere in the method. Excluding those provenance
+    references is what keeps the two from being counted twice.
+    """
+
+    #: Restrict donors to reviewed entries. False keeps the historical pool.
+    reviewed_only: bool = False
+
+    #: Admit only these evidence codes. ``None`` admits every code.
+    #: Declared as a list, not a tuple, because payloads validate strictly and
+    #: arrive as JSON, where a list is what a caller can actually send.
+    evidence_codes: list[str] | None = None
+
+    #: Drop annotations whose provenance reference starts with any of these,
+    #: which is how sequence-derived electronic annotation is identified.
+    exclude_reference_prefixes: list[str] = Field(default_factory=list)
+
+    @property
+    def is_permissive(self) -> bool:
+        """True when the policy admits everything, the historical default.
+
+        Callers use this to skip building a filtered pool at all, so an
+        unset policy costs nothing.
+        """
+        return (
+            not self.reviewed_only
+            and self.evidence_codes is None
+            and not self.exclude_reference_prefixes
+        )
+
+    def cache_discriminator(self) -> str:
+        """A stable string identifying this policy for cache keys.
+
+        The reference pool is cached on disk by configuration and annotation
+        set. Adding a policy without adding it to that key would serve a pool
+        built under one policy to a caller asking for another, which is the
+        silent-mispairing failure this project has already measured once. The
+        permissive policy returns the empty string so existing cache entries
+        keep their keys and are not invalidated.
+        """
+        if self.is_permissive:
+            return ""
+        parts = [
+            f"reviewed={int(self.reviewed_only)}",
+            "codes=" + (",".join(sorted(self.evidence_codes)) if self.evidence_codes else "*"),
+            "norefs=" + (",".join(sorted(self.exclude_reference_prefixes)) or "*"),
+        ]
+        return "|".join(parts)
+
+
 # ---------------------------------------------------------------------------
 # predict_go_terms payloads
 # ---------------------------------------------------------------------------
@@ -115,6 +182,11 @@ class PredictGOTermsPayload(ProteaPayload, frozen=True):
     # every leaf candidate gets its is_a / part_of ancestor closure
     # synthesised as additional records, matching the candidate
     # distribution the lab booster saw at training time.
+
+    # Which proteins may donate annotations. Defaults to the historical
+    # unrestricted pool; see DonorPolicy for why the default is permissive.
+    donor_policy: DonorPolicy = DonorPolicy()
+
     expand_votes_to_ancestors: bool = False
 
     # Per-aspect KNN indices (opt-in). When True, three separate KNN
@@ -193,6 +265,11 @@ class PredictGOTermsBatchPayload(ProteaPayload, frozen=True):
     # IA information-accretion feature; kept in sync with PredictGOTermsPayload.
     compute_ia: bool = False
     ia_file: str | None = None
+
+    # Which proteins may donate annotations. Defaults to the historical
+    # unrestricted pool; see DonorPolicy for why the default is permissive.
+    donor_policy: DonorPolicy = DonorPolicy()
+
     expand_votes_to_ancestors: bool = False
     aspect_separated_knn: bool = True
 
