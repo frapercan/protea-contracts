@@ -98,6 +98,11 @@ class PredictGOTermsPayload(ProteaPayload, frozen=True):
     compute_classifier: bool = False
     compute_self_prior: bool = False
     compute_association: bool = False
+    # compute_protst stamps the ProtST text-to-GO transfer signal
+    # (protst_text_score / protst_vote_fraction / protst_present) onto every
+    # candidate from a precomputed ProtST kNN vote. Opt-in; when off the
+    # export emits NaN for the family (ADR-D45).
+    compute_protst: bool = False
     # compute_ia attaches IA(t), the snapshot-invariant information accretion of
     # each candidate term (the go_id-keyed quantity cafaeval f_micro_w weights
     # with), as a booster feature on the GOPrediction features JSONB blob.
@@ -177,6 +182,9 @@ class PredictGOTermsBatchPayload(ProteaPayload, frozen=True):
     compute_classifier: bool = False
     compute_self_prior: bool = False
     compute_association: bool = False
+    # ProtST text-to-GO transfer producer; kept in sync with
+    # PredictGOTermsPayload. Opt-in, NaN default (ADR-D45).
+    compute_protst: bool = False
     # Lineage features (4 columns) describing the GO-DAG relation
     # between each candidate term and the query's pre-cutoff known
     # annotations. Default off so bit-exact reproducibility against

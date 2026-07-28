@@ -25,7 +25,7 @@ from protea_contracts import (
 
 class TestConstants:
     def test_schema_version(self) -> None:
-        assert SCHEMA_VERSION == "v5"
+        assert SCHEMA_VERSION == "v6"
 
     def test_label_column(self) -> None:
         assert LABEL_COLUMN == "label"
@@ -93,9 +93,15 @@ class TestComputeSchemaSha:
         pool-injected k_context / plm_id (develop-only) now coexist, giving
         75 columns. Previous goldens: b2a5cd46ec6b on main (73 columns),
         8cc4cabded9b on develop (71 columns).
+
+        v6 (1.5.0): adds the protst_text family (protst_text_score,
+        protst_vote_fraction, protst_present) for the ProtST text-to-GO
+        transfer lever, giving 78 columns. Additive: existing boosters
+        select only their own families, so their family-aware schema hash is
+        unchanged. Previous golden (v5 / 1.4.0): 4e2c515273d3.
         """
         sha = compute_schema_sha(ALL_FEATURES)
-        assert sha == "4e2c515273d3", (
+        assert sha == "bcb5453c5a0e", (
             f"ALL_FEATURES sha drifted from golden: got {sha}. "
             "If this change is intended, bump protea-contracts to "
             "the next major and update this golden literal."

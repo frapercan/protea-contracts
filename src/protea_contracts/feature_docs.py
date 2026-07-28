@@ -889,6 +889,73 @@ _DOCS: list[FeatureDoc] = [
         value_range="0.0 or 1.0 when produced; NaN in the default export",
         notes="ADR-D45: DECLARED_ABSENT in the default export. See classifier_score.",
     ),
+    # ── ProtST text-to-GO transfer family (DECLARED_ABSENT per ADR-D45) ─────
+    FeatureDoc(
+        name="protst_text_score",
+        family="protst_text",
+        summary="ProtST text-to-GO transfer score for this candidate GO term.",
+        definition=(
+            "Normalised cosine-weighted vote for the candidate term from the "
+            "query protein's ProtST kNN neighbourhood. The producer takes the "
+            "query's ProtST protein embedding, retrieves its top-30 cosine-"
+            "nearest reference proteins (both banks L2-normalised), casts a "
+            "vote per reference GO term weighted by the neighbour cosine, and "
+            "normalises by the per-query maximum vote. Reference GO terms are "
+            "restricted to the pre-cutoff annotation set (leakage-free). "
+            "Produced by "
+            "``protea.core.operations.predict_go_terms._protst_text.apply_protst_text``, "
+            "gated by ``compute_protst`` (default False), so the default "
+            "research-dataset export leaves it at the NaN default."
+        ),
+        producer="protea.core.operations.predict_go_terms._protst_text.apply_protst_text (gated by compute_protst, default False; export default emits NaN via _lafa_default_fields)",
+        status=FeatureStatus.DECLARED_ABSENT,
+        unit="normalised vote",
+        value_range="0.0..1.0 when produced; NaN in the default export",
+        notes=(
+            "ADR-D45: DECLARED_ABSENT in the default export. The ProtST "
+            "reference bank is a separate EmbeddingConfig; whether it is "
+            "populated in a given deployment is a database-state question, so "
+            "no BROKEN status is asserted here. See classifier_score."
+        ),
+    ),
+    FeatureDoc(
+        name="protst_vote_fraction",
+        family="protst_text",
+        summary="Fraction of the query's ProtST neighbours that carry this candidate term.",
+        definition=(
+            "Coverage feature for the ProtST transfer: the fraction of the "
+            "query's 30 ProtST cosine-nearest neighbours whose pre-cutoff "
+            "annotations include the candidate term. Decouples a single very "
+            "close neighbour from a broad consensus, mirroring "
+            "``neighbor_vote_fraction``. Same producer and gating as "
+            "``protst_text_score`` (``compute_protst``, default False), so the "
+            "default export leaves it at the NaN default."
+        ),
+        producer="protea.core.operations.predict_go_terms._protst_text.apply_protst_text (gated by compute_protst, default False; export default emits NaN via _lafa_default_fields)",
+        status=FeatureStatus.DECLARED_ABSENT,
+        unit="fraction",
+        value_range="0.0..1.0 when produced; NaN in the default export",
+        notes="ADR-D45: DECLARED_ABSENT in the default export. See protst_text_score.",
+    ),
+    FeatureDoc(
+        name="protst_present",
+        family="protst_text",
+        summary="Whether the ProtST source contributed to this candidate at all.",
+        definition=(
+            "Presence flag for the ProtST transfer source: 1.0 when at least "
+            "one ProtST neighbour voted the candidate term (so the score is a "
+            "measured value), 0.0 when ProtST had coverage but no support. "
+            "Distinguishes a measured zero from an absent source, letting the "
+            "booster gate on ProtST coverage, mirroring "
+            "``interpro_present`` / ``knn_present``. Same producer and gating "
+            "as ``protst_text_score`` (``compute_protst``, default False)."
+        ),
+        producer="protea.core.operations.predict_go_terms._protst_text.apply_protst_text (gated by compute_protst, default False; export default emits NaN via _lafa_default_fields)",
+        status=FeatureStatus.DECLARED_ABSENT,
+        unit="flag",
+        value_range="0.0 or 1.0 when produced; NaN in the default export",
+        notes="ADR-D45: DECLARED_ABSENT in the default export. See protst_text_score.",
+    ),
     # ── Categorical annotation metadata (family "annotation_meta") ──────────
     FeatureDoc(
         name="qualifier",
