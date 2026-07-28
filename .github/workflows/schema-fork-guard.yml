@@ -23,14 +23,18 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install what the schema module imports
+      - name: Install what the package needs to be imported
         run: |
           set -euo pipefail
-          # The schema module is not import-free: reading it pulls the numeric
-          # stack in. An earlier version of this job assumed otherwise and
-          # failed on the import rather than on a real disagreement.
+          # Reading the schema imports the package, so the package's own
+          # runtime dependencies have to be present. An earlier version of
+          # this job assumed the read was dependency-free and failed on the
+          # import rather than on a real disagreement, twice, once per
+          # dependency. These are the three declared under
+          # [tool.poetry.dependencies]; the package itself is deliberately not
+          # installed, because each side has to be read from its own checkout.
           python -m pip install --quiet --upgrade pip
-          python -m pip install --quiet numpy
+          python -m pip install --quiet pydantic numpy pyarrow
 
       - name: Compare schema identity against the other branch
         env:
