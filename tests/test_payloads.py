@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 
 import pytest
-from pydantic import ValidationError
+from pydantic import Field, ValidationError
 
 from protea_contracts import (
     PredictGOTermsBatchPayload,
@@ -206,3 +206,47 @@ class TestAProteinIsNotAutomaticallyItsOwnNeighbour:
         )
         assert p.exclude_self_neighbour is True
         assert p.model_dump()["exclude_self_neighbour"] is True
+
+
+class TestTheBasePayloadRefusesWhatItCannotHonour:
+    """The failure the other two settings do not cover.
+
+    ``strict=True`` stops a value being coerced into the wrong type and
+    ``frozen=True`` stops it changing afterwards. Neither stops a key the
+    model never declared from being dropped on the floor, which is how a
+    consumer running older code than its dispatcher does the wrong work and
+    reports success.
+    """
+
+    def test_an_undeclared_key_is_refused_rather_than_dropped(self) -> None:
+        class Demo(ProteaPayload, frozen=True):
+            a: int
+
+        with pytest.raises(ValidationError) as exc:
+            Demo.model_validate({"a": 1, "max_k_position": 4})
+        assert "max_k_position" in str(exc.value)
+
+    def test_the_refusal_names_the_key_so_a_version_skew_is_readable(self) -> None:
+        """A dispatcher reading this must be able to tell WHICH field is unknown.
+
+        The whole value of the refusal is that it points at the field the
+        consumer is too old to have, so "extra_forbidden" alone would leave
+        the reader where the silent drop left them.
+        """
+
+        class Demo(ProteaPayload, frozen=True):
+            a: int
+
+        with pytest.raises(ValidationError) as exc:
+            Demo.model_validate({"a": 1, "unknown_one": 1, "unknown_two": 2})
+        message = str(exc.value)
+        assert "unknown_one" in message
+        assert "unknown_two" in message
+
+    def test_a_declared_field_named_extras_is_untouched(self) -> None:
+        """Forbidding extras does not forbid a field that happens to be a mapping."""
+
+        class Demo(ProteaPayload, frozen=True):
+            extras: dict[str, int] = Field(default_factory=dict)
+
+        assert Demo.model_validate({"extras": {"k": 1}}).extras == {"k": 1}
