@@ -185,7 +185,7 @@ class TestAProteinIsNotAutomaticallyItsOwnNeighbour:
     it is. The two are levels of the retriever, not a detail of how it ran.
     """
 
-    def test_it_defaults_to_the_behaviour_every_stored_run_had(self):
+    def test_it_defaults_to_the_behaviour_every_stored_run_had(self) -> None:
         from protea_contracts import PredictGOTermsPayload
 
         p = PredictGOTermsPayload.model_validate(
@@ -195,7 +195,7 @@ class TestAProteinIsNotAutomaticallyItsOwnNeighbour:
         )
         assert p.exclude_self_neighbour is False
 
-    def test_it_travels_in_the_dump_so_the_receipt_can_carry_it(self):
+    def test_it_travels_in_the_dump_so_the_receipt_can_carry_it(self) -> None:
         from protea_contracts import PredictGOTermsPayload
 
         p = PredictGOTermsPayload.model_validate(
