@@ -50,8 +50,18 @@ class ProteaPayload(BaseModel):
     another experiment's parameters. Nothing failed, so nothing was noticed.
 
     Forbidding extras turns that class of version skew into a refusal at
-    validation, before the job is queued. It is a contract rather than a
-    synchronisation discipline, and a discipline is the thing that fails.
+    validation. Where that refusal lands is worth stating exactly, because the
+    obvious reading is the wrong one: it is not at dispatch. In the incident the
+    dispatcher was current and validated the payload happily; the consumer was
+    the stale one. So the refusal happens in the worker, after the job is
+    queued, when the old model meets a key it does not declare. The job fails
+    loudly instead of succeeding wrongly, which is the whole of the gain.
+
+    It also only protects a skew the guard itself has reached. A consumer too
+    old to carry this setting ignores extras as before, so landing it does not
+    repair a fleet already behind: it stops the next one. That is a contract
+    rather than a synchronisation discipline, and a discipline is the thing
+    that fails.
 
     Calibrated before landing, as a new guard must be: of 1,727 job payloads
     on record, resolved against the model each one actually validates through,
