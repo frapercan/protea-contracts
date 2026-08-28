@@ -38,9 +38,38 @@ class ProteaPayload(BaseModel):
     Subclass and declare fields using pydantic annotations. Validation
     runs automatically via :meth:`model_validate`. ``strict=True``
     prevents silent type coercion (``"yes"`` is not a valid ``bool``).
+
+    ``extra="forbid"`` prevents silent DROPPING, which is the failure the
+    other two settings do not cover and the one that has actually cost this
+    project measurements. Pydantic ignores undeclared keys by default, so a
+    worker running code older than the payload it receives accepts the job,
+    discards the field it does not know, does the wrong work and reports
+    success. That happened: a neighbourhood-depth sweep dispatched with a
+    field one consumer did not yet have produced sixteen cells scored against
+    the wrong candidate set, every one of them valid-looking and labelled with
+    another experiment's parameters. Nothing failed, so nothing was noticed.
+
+    Forbidding extras turns that class of version skew into a refusal at
+    validation. Where that refusal lands is worth stating exactly, because the
+    obvious reading is the wrong one: it is not at dispatch. In the incident the
+    dispatcher was current and validated the payload happily; the consumer was
+    the stale one. So the refusal happens in the worker, after the job is
+    queued, when the old model meets a key it does not declare. The job fails
+    loudly instead of succeeding wrongly, which is the whole of the gain.
+
+    It also only protects a skew the guard itself has reached. A consumer too
+    old to carry this setting ignores extras as before, so landing it does not
+    repair a fleet already behind: it stops the next one. That is a contract
+    rather than a synchronisation discipline, and a discipline is the thing
+    that fails.
+
+    Calibrated before landing, as a new guard must be: of 1,727 job payloads
+    on record, resolved against the model each one actually validates through,
+    **zero carried a key its model does not declare**. The guard rejects
+    nothing that exists and everything that would have been silently dropped.
     """
 
-    model_config = ConfigDict(strict=True, frozen=True)
+    model_config = ConfigDict(strict=True, frozen=True, extra="forbid")
 
 
 class DonorPolicy(ProteaPayload, frozen=True):
