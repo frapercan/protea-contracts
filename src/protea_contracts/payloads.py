@@ -125,6 +125,24 @@ class PredictGOTermsPayload(ProteaPayload, frozen=True):
     query_set_id: str | None = None
     limit_per_entry: PositiveInt = 5
     distance_threshold: float | None = None
+    #: Whether the query protein may be its own neighbour.
+    #:
+    #: Default False, which is what every run before 2026-08-28 did, and the
+    #: default is preserved so no stored result changes meaning. It is recorded
+    #: either way, because a run that allows self-retrieval and a run that
+    #: forbids it are two levels of the retriever and the record has to be able
+    #: to tell them apart.
+    #:
+    #: Measured on the campaign that prompted this: with self-retrieval allowed,
+    #: the nearest neighbour is the query itself for 95.0 per cent of candidate
+    #: rows at depth 1, and 81.8 per cent of the 14,032 query proteins have no
+    #: other neighbour at that depth at all. A neighbourhood of one, where the
+    #: one is yourself, is not a transfer.
+    #:
+    #: When true the search asks for one more than it needs and drops the self
+    #: hit, so ``limit_per_entry`` keeps meaning the number of real donors
+    #: rather than the number of rows the index returned.
+    exclude_self_neighbour: bool = False
     batch_size: PositiveInt = 1024
 
     # Search backend
@@ -236,6 +254,7 @@ class PredictGOTermsBatchPayload(ProteaPayload, frozen=True):
     query_set_id: str | None = None
     limit_per_entry: PositiveInt = 5
     distance_threshold: float | None = None
+    exclude_self_neighbour: bool = False
     search_backend: str = "numpy"
     metric: str = "cosine"
     faiss_index_type: str = "Flat"

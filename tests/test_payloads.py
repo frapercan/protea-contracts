@@ -175,3 +175,34 @@ class TestRerankerSpec:
         spec = RerankerSpec.model_validate({"runner": "lightgbm"})
         with pytest.raises(ValidationError):
             spec.runner = "gnn"  # type: ignore[misc]
+
+
+class TestAProteinIsNotAutomaticallyItsOwnNeighbour:
+    """The retriever can be told to exclude the query from its own neighbourhood.
+
+    Recorded rather than assumed, and defaulting to the historical behaviour, so
+    that a stored result keeps its meaning and a new one can say which of the two
+    it is. The two are levels of the retriever, not a detail of how it ran.
+    """
+
+    def test_it_defaults_to_the_behaviour_every_stored_run_had(self):
+        from protea_contracts import PredictGOTermsPayload
+
+        p = PredictGOTermsPayload.model_validate(
+            {"embedding_config_id": "22222222-2222-2222-2222-222222222222",
+             "annotation_set_id": "33333333-3333-3333-3333-333333333333",
+             "ontology_snapshot_id": "44444444-4444-4444-4444-444444444444"}
+        )
+        assert p.exclude_self_neighbour is False
+
+    def test_it_travels_in_the_dump_so_the_receipt_can_carry_it(self):
+        from protea_contracts import PredictGOTermsPayload
+
+        p = PredictGOTermsPayload.model_validate(
+            {"embedding_config_id": "22222222-2222-2222-2222-222222222222",
+             "annotation_set_id": "33333333-3333-3333-3333-333333333333",
+             "ontology_snapshot_id": "44444444-4444-4444-4444-444444444444",
+             "exclude_self_neighbour": True}
+        )
+        assert p.exclude_self_neighbour is True
+        assert p.model_dump()["exclude_self_neighbour"] is True
