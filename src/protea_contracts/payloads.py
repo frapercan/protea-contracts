@@ -14,7 +14,14 @@ from __future__ import annotations
 
 from typing import Annotated, Any
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    SerializerFunctionWrapHandler,
+    field_validator,
+    model_serializer,
+)
 
 #: Convenience alias used across payload field declarations.
 PositiveInt = Annotated[int, Field(gt=0)]
@@ -106,6 +113,21 @@ class DonorPolicy(ProteaPayload, frozen=True):
     #: which is how sequence-derived electronic annotation is identified.
     exclude_reference_prefixes: list[str] = Field(default_factory=list)
 
+    #: Admit only donors that were members of the corpus at this GOA release:
+    #: ``protein.first_admitted_release`` at or before it. A protein no pass
+    #: has admitted is not a member. ``None`` admits every protein the
+    #: annotation set carries, the historical pool.
+    #:
+    #: The annotation set of a release keeps the annotations of every protein
+    #: the corpus holds when the set is loaded, so it also carries proteins the
+    #: corpus admitted only at a later release. Measured on 2026-11-04 for
+    #: release 211: 30,128 such proteins carry annotations in its set, 29,922
+    #: of them donate in the full length ankh bank, and none of those
+    #: annotations is experimental (166,143 electronic, 20,914 of other
+    #: evidence). A bank built at a window's start that admits them was
+    #: assembled knowing which proteins the corpus would admit afterwards.
+    admitted_by_release: int | None = Field(default=None, ge=1)
+
     @property
     def is_permissive(self) -> bool:
         """True when the policy admits everything, the historical default.
@@ -117,7 +139,24 @@ class DonorPolicy(ProteaPayload, frozen=True):
             not self.reviewed_only
             and self.evidence_codes is None
             and not self.exclude_reference_prefixes
+            and self.admitted_by_release is None
         )
+
+    @model_serializer(mode="wrap")
+    def _leave_out_an_unset_membership(
+        self, handler: SerializerFunctionWrapHandler
+    ) -> dict[str, Any]:
+        """Dump exactly what a policy dumped before membership existed, when unset.
+
+        The dump is recorded on every prediction set and compared field by
+        field by the method seal, so a policy that grew a key at None would
+        stop matching every arm on record without changing what any of them
+        did. At None the key is left out; at a release it is in.
+        """
+        data: dict[str, Any] = handler(self)
+        if data.get("admitted_by_release") is None:
+            data.pop("admitted_by_release", None)
+        return data
 
     def cache_discriminator(self) -> str:
         """A stable string identifying this policy for cache keys.
@@ -136,6 +175,11 @@ class DonorPolicy(ProteaPayload, frozen=True):
             "codes=" + (",".join(sorted(self.evidence_codes)) if self.evidence_codes else "*"),
             "norefs=" + (",".join(sorted(self.exclude_reference_prefixes)) or "*"),
         ]
+        # Appended only when set, for the reason the permissive policy returns
+        # the empty string: every pool cached under a policy without it keeps
+        # its key.
+        if self.admitted_by_release is not None:
+            parts.append(f"admitted<={self.admitted_by_release}")
         return "|".join(parts)
 
 
