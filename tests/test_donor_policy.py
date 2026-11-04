@@ -97,3 +97,80 @@ class TestItTravelsOnThePayload:
         assert payload.donor_policy.reviewed_only is True
         assert payload.donor_policy.evidence_codes == ["EXP", "IDA"]
         assert payload.donor_policy.is_permissive is False
+
+
+class TestMembershipAtTheWindowStart:
+    """``admitted_by_release``: a donor must already be a member of the corpus.
+
+    Measured on 2026-11-04: release 211's annotation set carries 30,128
+    proteins the corpus admitted only later, 29,922 of which donate in the
+    full length ankh bank. These pin that the restriction travels, keys its
+    own cache, and leaves every policy recorded before it byte-identical.
+    """
+
+    def test_it_is_unset_by_default(self) -> None:
+        assert DonorPolicy().admitted_by_release is None
+
+    def test_setting_it_restricts_the_pool(self) -> None:
+        assert DonorPolicy(admitted_by_release=211).is_permissive is False
+
+    def test_it_keys_its_own_cache(self) -> None:
+        assert DonorPolicy(admitted_by_release=211).cache_discriminator() == (
+            "reviewed=0|codes=*|norefs=*|admitted<=211"
+        )
+        assert (
+            DonorPolicy(admitted_by_release=211).cache_discriminator()
+            != DonorPolicy(admitted_by_release=227).cache_discriminator()
+        )
+
+    def test_every_key_minted_before_it_stays_the_same(self) -> None:
+        # A pool cached under a policy that never mentioned membership keeps
+        # its key, so the disk cache is not invalidated by the new field.
+        assert DonorPolicy(reviewed_only=True).cache_discriminator() == (
+            "reviewed=1|codes=*|norefs=*"
+        )
+        assert DonorPolicy(evidence_codes=["IDA", "EXP"]).cache_discriminator() == (
+            "reviewed=0|codes=EXP,IDA|norefs=*"
+        )
+
+    def test_an_unset_membership_dumps_what_a_policy_dumped_before(self) -> None:
+        # The dump is recorded on every prediction set and compared by the
+        # method seal, so a permissive policy must not grow a key.
+        before: dict[str, object] = {
+            "reviewed_only": False,
+            "evidence_codes": None,
+            "exclude_reference_prefixes": [],
+        }
+        assert DonorPolicy().model_dump() == before
+        assert DonorPolicy().model_dump(mode="json") == before
+
+    def test_a_set_membership_is_in_the_dump(self) -> None:
+        assert DonorPolicy(admitted_by_release=211).model_dump()["admitted_by_release"] == 211
+
+    def test_the_dump_round_trips(self) -> None:
+        for policy in (DonorPolicy(), DonorPolicy(admitted_by_release=211, reviewed_only=True)):
+            assert DonorPolicy.model_validate(policy.model_dump(mode="json")) == policy
+
+    def test_a_release_below_one_is_refused(self) -> None:
+        with pytest.raises(ValidationError):
+            DonorPolicy(admitted_by_release=0)
+
+    def test_it_travels_on_the_batch_payload(self) -> None:
+        payload = PredictGOTermsBatchPayload.model_validate(
+            {
+                "embedding_config_id": "cfg",
+                "annotation_set_id": "aset",
+                "ontology_snapshot_id": "snap",
+                "prediction_set_id": "pset",
+                "parent_job_id": "job",
+                "query_accessions": ["P00001"],
+                "donor_policy": {"admitted_by_release": 211},
+            }
+        )
+        assert payload.donor_policy.admitted_by_release == 211
+        assert payload.model_dump(mode="json")["donor_policy"] == {
+            "reviewed_only": False,
+            "evidence_codes": None,
+            "exclude_reference_prefixes": [],
+            "admitted_by_release": 211,
+        }
