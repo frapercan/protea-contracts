@@ -12,7 +12,7 @@ import the feature constants.
 
 from __future__ import annotations
 
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from pydantic import (
     BaseModel,
@@ -21,10 +21,31 @@ from pydantic import (
     SerializerFunctionWrapHandler,
     field_validator,
     model_serializer,
+    model_validator,
 )
 
 #: Convenience alias used across payload field declarations.
 PositiveInt = Annotated[int, Field(gt=0)]
+
+#: Which proteins a query's own-neighbour exclusion removes. ``"sequence"`` drops
+#: every reference carrying the query's own sequence: the query and its twins,
+#: other proteins with the identical sequence. ``"accession"`` drops the query
+#: only and keeps its twins as donors, since they are other proteins annotated by
+#: others. ``"none"`` drops nobody.
+SelfExclusion = Literal["none", "sequence", "accession"]
+
+
+def _require_consistent_self_exclusion(flag: bool, rule: str | None) -> None:
+    """Refuse a flag that asks for an exclusion the rule says not to make.
+
+    Resolving the contradiction either way would leave a neighbourhood nobody
+    chose, so both payloads refuse it at validation instead of at the search.
+    """
+    if flag and rule == "none":
+        raise ValueError(
+            "exclude_self_neighbour asks to exclude the query and self_exclusion says "
+            "'none'; set one of them, not both"
+        )
 
 
 def _require_non_empty_str(value: str, label: str) -> str:
@@ -212,10 +233,16 @@ class PredictGOTermsPayload(ProteaPayload, frozen=True):
     #: other neighbour at that depth at all. A neighbourhood of one, where the
     #: one is yourself, is not a transfer.
     #:
-    #: When true the search asks for one more than it needs and drops the self
-    #: hit, so ``limit_per_entry`` keeps meaning the number of real donors
-    #: rather than the number of rows the index returned.
+    #: When true the search drops the query by the rule in ``self_exclusion``
+    #: and first asks for as many extra neighbours as that drop can cost, so
+    #: ``limit_per_entry`` keeps meaning the number of real donors rather than
+    #: the number of rows the index returned.
     exclude_self_neighbour: bool = False
+    #: The rule the exclusion follows (:data:`SelfExclusion`). Unset, the flag
+    #: above decides with the meaning protea-method gives it: true is
+    #: ``"sequence"``, false is ``"none"``, so every stored payload reads as it
+    #: did. Set, it decides; ``"accession"`` is the query only, its twins kept.
+    self_exclusion: SelfExclusion | None = None
     batch_size: PositiveInt = 1024
 
     # Search backend
@@ -314,6 +341,11 @@ class PredictGOTermsPayload(ProteaPayload, frozen=True):
     def must_be_non_empty(cls, v: str) -> str:
         return _require_non_empty_str(v, "value")
 
+    @model_validator(mode="after")
+    def self_exclusion_is_consistent(self) -> PredictGOTermsPayload:
+        _require_consistent_self_exclusion(self.exclude_self_neighbour, self.self_exclusion)
+        return self
+
 
 class PredictGOTermsBatchPayload(ProteaPayload, frozen=True):
     """Payload for one KNN batch dispatched by the coordinator."""
@@ -328,6 +360,8 @@ class PredictGOTermsBatchPayload(ProteaPayload, frozen=True):
     limit_per_entry: PositiveInt = 5
     distance_threshold: float | None = None
     exclude_self_neighbour: bool = False
+    #: As in :class:`PredictGOTermsPayload`, which hands it to every batch.
+    self_exclusion: SelfExclusion | None = None
     search_backend: str = "numpy"
     metric: str = "cosine"
     faiss_index_type: str = "Flat"
@@ -385,6 +419,11 @@ class PredictGOTermsBatchPayload(ProteaPayload, frozen=True):
     reranker_lk_feature_schema_sha: str | None = None
     reranker_pk_artifact_uri: str | None = None
     reranker_pk_feature_schema_sha: str | None = None
+
+    @model_validator(mode="after")
+    def self_exclusion_is_consistent(self) -> PredictGOTermsBatchPayload:
+        _require_consistent_self_exclusion(self.exclude_self_neighbour, self.self_exclusion)
+        return self
 
 
 class StorePredictionsPayload(ProteaPayload, frozen=True):
