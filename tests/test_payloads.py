@@ -208,6 +208,66 @@ class TestAProteinIsNotAutomaticallyItsOwnNeighbour:
         assert p.model_dump()["exclude_self_neighbour"] is True
 
 
+_PREDICT: dict[str, object] = {
+    "embedding_config_id": "22222222-2222-2222-2222-222222222222",
+    "annotation_set_id": "33333333-3333-3333-3333-333333333333",
+    "ontology_snapshot_id": "44444444-4444-4444-4444-444444444444",
+}
+_BATCH: dict[str, object] = {
+    **_PREDICT,
+    "prediction_set_id": "55555555-5555-5555-5555-555555555555",
+    "parent_job_id": "66666666-6666-6666-6666-666666666666",
+    "query_accessions": ["P69905"],
+}
+_Predict = type[PredictGOTermsPayload] | type[PredictGOTermsBatchPayload]
+_BOTH_PAYLOADS = pytest.mark.parametrize(
+    ("model", "body"),
+    [(PredictGOTermsPayload, _PREDICT), (PredictGOTermsBatchPayload, _BATCH)],
+    ids=["predict", "batch"],
+)
+
+
+class TestTheSelfExclusionRuleIsNamed:
+    """Which proteins the exclusion removes: the query's sequence, or the query.
+
+    By sequence, a protein's twins (other proteins with the identical sequence)
+    leave with it; by accession they stay as donors, since they are other
+    proteins annotated by others. Unset, the flag keeps the meaning it had, so a
+    stored payload reads as it did.
+    """
+
+    @_BOTH_PAYLOADS
+    def test_it_is_unset_by_default_so_the_flag_decides(
+        self, model: _Predict, body: dict[str, object]
+    ) -> None:
+        assert model.model_validate(body).self_exclusion is None
+
+    @_BOTH_PAYLOADS
+    @pytest.mark.parametrize("rule", ["none", "sequence", "accession"])
+    def test_each_rule_travels_in_the_dump(
+        self, model: _Predict, body: dict[str, object], rule: str
+    ) -> None:
+        p = model.model_validate({**body, "self_exclusion": rule})
+        assert p.model_dump()["self_exclusion"] == rule
+
+    def test_the_flag_and_a_rule_that_says_how_go_together(self) -> None:
+        p = PredictGOTermsPayload.model_validate(
+            {**_PREDICT, "exclude_self_neighbour": True, "self_exclusion": "accession"}
+        )
+        assert (p.exclude_self_neighbour, p.self_exclusion) == (True, "accession")
+
+    def test_an_unknown_rule_is_refused(self) -> None:
+        with pytest.raises(ValidationError):
+            PredictGOTermsPayload.model_validate({**_PREDICT, "self_exclusion": "twins"})
+
+    @_BOTH_PAYLOADS
+    def test_a_flag_the_rule_contradicts_is_refused(
+        self, model: _Predict, body: dict[str, object]
+    ) -> None:
+        with pytest.raises(ValidationError, match="set one of them, not both"):
+            model.model_validate({**body, "exclude_self_neighbour": True, "self_exclusion": "none"})
+
+
 class TestTheBasePayloadRefusesWhatItCannotHonour:
     """The failure the other two settings do not cover.
 
