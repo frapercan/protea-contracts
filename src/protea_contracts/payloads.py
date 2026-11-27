@@ -34,6 +34,18 @@ PositiveInt = Annotated[int, Field(gt=0)]
 #: others. ``"none"`` drops nobody.
 SelfExclusion = Literal["none", "sequence", "accession"]
 
+#: The space the neighbour search runs in. Unset is the space the embedding
+#: configuration produced, the one every stored payload searched. ``"center"``
+#: subtracts the mean of the bank's vectors, so a direction every protein shares
+#: stops deciding the cosine: in an anisotropic bank two unrelated proteins can
+#: already score close to 1 and the neighbourhood is ranked inside that sliver.
+#: ``"whiten"`` centres and also gives every direction unit variance, through a
+#: covariance shrunk by Ledoit-Wolf, so no free parameter decides how much the
+#: estimate is trusted. The statistics are read without labels from the bank of
+#: the cut the search runs against, and the queries are mapped with the bank's
+#: statistics, never with their own.
+EmbeddingTransform = Literal["center", "whiten"]
+
 
 def _require_consistent_self_exclusion(flag: bool, rule: str | None) -> None:
     """Refuse a flag that asks for an exclusion the rule says not to make.
@@ -243,6 +255,9 @@ class PredictGOTermsPayload(ProteaPayload, frozen=True):
     #: ``"sequence"``, false is ``"none"``, so every stored payload reads as it
     #: did. Set, it decides; ``"accession"`` is the query only, its twins kept.
     self_exclusion: SelfExclusion | None = None
+    #: The space the search runs in (:data:`EmbeddingTransform`). Unset, the
+    #: configuration's own space, so every stored payload searches as it did.
+    embedding_transform: EmbeddingTransform | None = None
     batch_size: PositiveInt = 1024
 
     # Search backend
@@ -362,6 +377,8 @@ class PredictGOTermsBatchPayload(ProteaPayload, frozen=True):
     exclude_self_neighbour: bool = False
     #: As in :class:`PredictGOTermsPayload`, which hands it to every batch.
     self_exclusion: SelfExclusion | None = None
+    #: As in :class:`PredictGOTermsPayload`, which hands it to every batch.
+    embedding_transform: EmbeddingTransform | None = None
     search_backend: str = "numpy"
     metric: str = "cosine"
     faiss_index_type: str = "Flat"

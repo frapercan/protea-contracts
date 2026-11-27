@@ -268,6 +268,37 @@ class TestTheSelfExclusionRuleIsNamed:
             model.model_validate({**body, "exclude_self_neighbour": True, "self_exclusion": "none"})
 
 
+class TestTheSearchSpaceIsNamed:
+    """The space the neighbour search runs in: the configuration's own, centred or whitened.
+
+    Unset is the configuration's own space, so a stored payload searches as it
+    did; a set value travels to every batch, and a name the search does not
+    know is refused rather than read as no transform.
+    """
+
+    @_BOTH_PAYLOADS
+    def test_it_is_unset_by_default_so_the_space_is_the_configurations(
+        self, model: _Predict, body: dict[str, object]
+    ) -> None:
+        assert model.model_validate(body).embedding_transform is None
+
+    @_BOTH_PAYLOADS
+    @pytest.mark.parametrize("transform", ["center", "whiten"])
+    def test_each_transform_travels_in_the_dump(
+        self, model: _Predict, body: dict[str, object], transform: str
+    ) -> None:
+        p = model.model_validate({**body, "embedding_transform": transform})
+        assert p.model_dump()["embedding_transform"] == transform
+
+    @_BOTH_PAYLOADS
+    @pytest.mark.parametrize("transform", ["none", "centre", "all-but-the-top", ""])
+    def test_a_transform_the_search_does_not_know_is_refused(
+        self, model: _Predict, body: dict[str, object], transform: str
+    ) -> None:
+        with pytest.raises(ValidationError):
+            model.model_validate({**body, "embedding_transform": transform})
+
+
 class TestTheBasePayloadRefusesWhatItCannotHonour:
     """The failure the other two settings do not cover.
 
