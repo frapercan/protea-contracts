@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from typing import get_args
 
 import pytest
 from pydantic import Field, ValidationError
@@ -14,6 +15,7 @@ from protea_contracts import (
     RerankerSpec,
     StorePredictionsPayload,
 )
+from protea_contracts.payloads import EmbeddingTransform, SelfExclusion
 
 
 def _uuid() -> str:
@@ -268,13 +270,73 @@ class TestTheSelfExclusionRuleIsNamed:
             model.model_validate({**body, "exclude_self_neighbour": True, "self_exclusion": "none"})
 
 
+class TestTheQueryCanLeaveAfterRetrieval:
+    """``accession_after_retrieval``: the search returns the asked depth, then the query leaves.
+
+    It is the exclusion LAFA's embedding baseline makes, so a query in the pool
+    keeps one neighbour fewer. It removes the query, so a payload that names it
+    must also say, in the flag, that the query was excluded; the two older rules
+    keep deciding over an unset flag, as they always did.
+    """
+
+    def test_it_is_the_fourth_rule(self) -> None:
+        assert get_args(SelfExclusion) == (
+            "none",
+            "sequence",
+            "accession",
+            "accession_after_retrieval",
+        )
+
+    @_BOTH_PAYLOADS
+    def test_it_is_accepted_with_the_flag_that_says_the_query_leaves(
+        self, model: _Predict, body: dict[str, object]
+    ) -> None:
+        p = model.model_validate(
+            {**body, "exclude_self_neighbour": True, "self_exclusion": "accession_after_retrieval"}
+        )
+        assert (p.exclude_self_neighbour, p.self_exclusion) == (True, "accession_after_retrieval")
+        dump = p.model_dump(mode="json")
+        assert (dump["exclude_self_neighbour"], dump["self_exclusion"]) == (
+            True,
+            "accession_after_retrieval",
+        )
+
+    @_BOTH_PAYLOADS
+    @pytest.mark.parametrize("flag", [False, None], ids=["flag-false", "flag-unset"])
+    def test_it_is_refused_with_the_flag_that_says_the_query_may_stay(
+        self, model: _Predict, body: dict[str, object], flag: bool | None
+    ) -> None:
+        request: dict[str, object] = {**body, "self_exclusion": "accession_after_retrieval"}
+        if flag is not None:
+            request["exclude_self_neighbour"] = flag
+        with pytest.raises(ValidationError, match="set exclude_self_neighbour to true"):
+            model.model_validate(request)
+
+    @_BOTH_PAYLOADS
+    @pytest.mark.parametrize("rule", ["sequence", "accession"])
+    def test_the_older_rules_still_decide_over_an_unset_flag(
+        self, model: _Predict, body: dict[str, object], rule: str
+    ) -> None:
+        p = model.model_validate({**body, "self_exclusion": rule})
+        assert (p.exclude_self_neighbour, p.self_exclusion) == (False, rule)
+
+
 class TestTheSearchSpaceIsNamed:
-    """The space the neighbour search runs in: the configuration's own, centred or whitened.
+    """The space the neighbour search runs in: the configuration's own, or a named transform.
 
     Unset is the configuration's own space, so a stored payload searches as it
     did; a set value travels to every batch, and a name the search does not
     know is refused rather than read as no transform.
     """
+
+    def test_the_vocabulary_is_the_five_accepted_names(self) -> None:
+        assert get_args(EmbeddingTransform) == (
+            "center",
+            "standardize",
+            "whiten",
+            "remove_dominant_directions",
+            "remove_dominant_directions_fixed_count",
+        )
 
     @_BOTH_PAYLOADS
     def test_it_is_unset_by_default_so_the_space_is_the_configurations(
@@ -283,15 +345,25 @@ class TestTheSearchSpaceIsNamed:
         assert model.model_validate(body).embedding_transform is None
 
     @_BOTH_PAYLOADS
-    @pytest.mark.parametrize("transform", ["center", "whiten"])
+    @pytest.mark.parametrize(
+        "transform",
+        [
+            "center",
+            "standardize",
+            "whiten",
+            "remove_dominant_directions",
+            "remove_dominant_directions_fixed_count",
+        ],
+    )
     def test_each_transform_travels_in_the_dump(
         self, model: _Predict, body: dict[str, object], transform: str
     ) -> None:
         p = model.model_validate({**body, "embedding_transform": transform})
         assert p.model_dump()["embedding_transform"] == transform
+        assert p.model_dump(mode="json")["embedding_transform"] == transform
 
     @_BOTH_PAYLOADS
-    @pytest.mark.parametrize("transform", ["none", "centre", "all-but-the-top", ""])
+    @pytest.mark.parametrize("transform", ["none", "centre", "zca", "all-but-the-top", ""])
     def test_a_transform_the_search_does_not_know_is_refused(
         self, model: _Predict, body: dict[str, object], transform: str
     ) -> None:
