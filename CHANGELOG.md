@@ -8,6 +8,55 @@ Because every consumer in the PROTEA stack pins this package, breaking changes
 (removed or renamed exports, payload field changes, ABC signature changes, or a
 moved `compute_schema_sha` / `axis_tuple_shortid` digest) require a major bump.
 
+## [1.8.0]
+
+The predict payloads can now name what a comparison with the literature's
+baselines needs: the space the search runs in, the donor set, the evidence
+channels, and an exclusion of the query after retrieval. Every new field and
+value defaults to what stored payloads did.
+
+### Added
+
+- `EmbeddingTransform` and the `embedding_transform` field on
+  `PredictGOTermsPayload` and `PredictGOTermsBatchPayload` (#55): the space
+  the neighbour search runs in. `center`, `standardize`, `whiten` (through a
+  Ledoit-Wolf shrunk covariance), `remove_dominant_directions` (as many
+  leading principal directions as the scree elbow of the bank's spectrum
+  chooses) and `remove_dominant_directions_fixed_count` (the literal
+  `floor(d / 100)`, reported and never adopted). Unset is the configuration's
+  own space; an unknown name such as `none`, `centre`, `zca`,
+  `all-but-the-top` or the empty string is refused.
+- `EvidenceChannel`, the seven evidence channels of PROTEA's partition of GOA
+  rows: `truth`, `curated`, `phylogenetic`, `orthology_electronic`,
+  `reviewed_field_electronic`, `signature_electronic` and `no_data` (#55).
+- `DonorPolicy.donor_set_id`, which admits only the donors a declared set of
+  photo members lists, and `DonorPolicy.evidence_channels`, which admits only
+  the annotations whose channel at the cut is listed (non-empty, each channel
+  once) (#55). Either makes the policy non-permissive and is appended to
+  `cache_discriminator()` only when set, as `donors=<id>` and as
+  `channels=<a,b>` with the channels sorted. While unset, each is left out of
+  the dump, so every policy recorded before this release dumps byte-identical
+  and keeps its cache key.
+- `accession_after_retrieval`, a `SelfExclusion` value (#55): the search
+  returns the asked depth from the pool as it stands and the query's own
+  accession is dropped afterwards, as LAFA's embedding baseline does, so a
+  query in the pool keeps one neighbour fewer. A payload that names it must
+  set `exclude_self_neighbour` to true.
+- First released here, after landing on `main` without a version of their
+  own: `exclude_self_neighbour` on both predict payloads (#51),
+  `DonorPolicy.admitted_by_release` (#52), and the `self_exclusion` rule with
+  `none`, `sequence` and `accession` (#54).
+
+### Changed
+
+- `ProteaPayload` refuses a key its model does not declare (`extra="forbid"`)
+  instead of dropping it (#50). Of the 1,727 job payloads on record when it
+  landed, none carried one.
+
+The feature contract does not move: `ALL_FEATURES` keeps its 78 columns and
+its digest (`bcb5453c5a0e`, schema `v6`), and no export was removed or
+renamed.
+
 ## [1.3.0]
 
 ### Added

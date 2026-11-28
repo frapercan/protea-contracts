@@ -12,7 +12,7 @@ import the feature constants.
 
 from __future__ import annotations
 
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any, Literal, get_args
 
 from pydantic import (
     BaseModel,
@@ -27,24 +27,98 @@ from pydantic import (
 #: Convenience alias used across payload field declarations.
 PositiveInt = Annotated[int, Field(gt=0)]
 
-#: Which proteins a query's own-neighbour exclusion removes. ``"sequence"`` drops
-#: every reference carrying the query's own sequence: the query and its twins,
-#: other proteins with the identical sequence. ``"accession"`` drops the query
-#: only and keeps its twins as donors, since they are other proteins annotated by
-#: others. ``"none"`` drops nobody.
-SelfExclusion = Literal["none", "sequence", "accession"]
+#: Which proteins a query's own-neighbour exclusion removes, and when.
+#: ``"sequence"`` drops every reference carrying the query's own sequence: the
+#: query and its twins, other proteins with the identical sequence.
+#: ``"accession"`` drops the query only and keeps its twins as donors, since they
+#: are other proteins annotated by others. Both cost no depth: the search first
+#: asks for as many extra neighbours as the drop can remove. ``"none"`` drops
+#: nobody.
+#:
+#: ``"accession_after_retrieval"`` drops the query by accession too, but only
+#: after the search has returned the asked depth from the pool as it stands,
+#: which is what LAFA's embedding baseline does: a query that is in the pool
+#: keeps one neighbour fewer, and any other keeps them all. It reproduces the
+#: literal LAFA and CAFA5 baselines, whose depth depends on whether the query is
+#: one of their references, and is not a rule for the platform's own arms.
+SelfExclusion = Literal["none", "sequence", "accession", "accession_after_retrieval"]
+
+#: The space the neighbour search runs in. Unset is the space the embedding
+#: configuration produced, the one every stored payload searched. Every value
+#: maps the bank and the queries with statistics read without labels from the
+#: bank of the cut the search runs against, never with the queries' own:
+#:
+#: - ``"center"`` subtracts the bank's mean vector, so a direction every protein
+#:   shares stops deciding the cosine: in an anisotropic bank two unrelated
+#:   proteins can already score close to 1 and the neighbourhood is ranked
+#:   inside that sliver.
+#: - ``"standardize"`` subtracts the mean and divides each dimension by its
+#:   standard deviation.
+#: - ``"whiten"`` centres and gives every direction unit variance, through a
+#:   covariance shrunk by Ledoit-Wolf, so no free parameter decides how much the
+#:   estimate is trusted.
+#: - ``"remove_dominant_directions"`` centres and removes the leading principal
+#:   directions, as many as the scree elbow of the bank's spectrum chooses: the
+#:   literature's all-but-the-top, with the number of directions read from the
+#:   bank instead of fixed.
+#: - ``"remove_dominant_directions_fixed_count"`` centres and removes the
+#:   ``floor(d / 100)`` leading principal directions of a ``d``-dimensional bank,
+#:   Bouras and Edwards' fixed count: the literal variant, reported beside the
+#:   adaptive one and never adopted.
+EmbeddingTransform = Literal[
+    "center",
+    "standardize",
+    "whiten",
+    "remove_dominant_directions",
+    "remove_dominant_directions_fixed_count",
+]
+
+#: The evidence channel of an annotation at a cut, as PROTEA partitions GOA rows
+#: by evidence code, reference and the protein's review status at that cut:
+#: ``"truth"``, the experimental codes; ``"curated"``, curator inference that is
+#: not phylogenetic; ``"phylogenetic"``, tree-based inference; electronic
+#: annotation in three channels, ``"orthology_electronic"`` (projections to
+#: orthologs), ``"reviewed_field_electronic"`` (translations of a reviewed
+#: entry's own fields) and ``"signature_electronic"`` (signatures, rules, and
+#: field translations on an unreviewed entry); and ``"no_data"``, the ND code.
+#: The values and their order are PROTEA's ``CHANNELS``, named here so a payload
+#: can ask for them without importing the platform.
+EvidenceChannel = Literal[
+    "truth",
+    "curated",
+    "phylogenetic",
+    "orthology_electronic",
+    "reviewed_field_electronic",
+    "signature_electronic",
+    "no_data",
+]
 
 
 def _require_consistent_self_exclusion(flag: bool, rule: str | None) -> None:
-    """Refuse a flag that asks for an exclusion the rule says not to make.
+    """Refuse a flag that contradicts the self-exclusion rule.
 
-    Resolving the contradiction either way would leave a neighbourhood nobody
+    Resolving a contradiction either way would leave a neighbourhood nobody
     chose, so both payloads refuse it at validation instead of at the search.
+    There are two: the flag asks to exclude the query and the rule says
+    ``"none"``; or the rule is ``"accession_after_retrieval"``, which removes
+    the query, and the flag says the query may be its own neighbour.
+
+    ``"sequence"`` and ``"accession"`` keep the meaning they were introduced
+    with, where a set rule decides over an unset flag. The after-retrieval rule
+    has no stored payload to stay compatible with, so it is held to the flag
+    from the start: a payload that names it also says, in the field every older
+    reader knows, that the query was excluded.
     """
     if flag and rule == "none":
         raise ValueError(
             "exclude_self_neighbour asks to exclude the query and self_exclusion says "
             "'none'; set one of them, not both"
+        )
+    if not flag and rule == "accession_after_retrieval":
+        raise ValueError(
+            "self_exclusion 'accession_after_retrieval' removes the query from its own "
+            "neighbourhood and exclude_self_neighbour says it may stay; set "
+            "exclude_self_neighbour to true"
         )
 
 
@@ -100,6 +174,15 @@ class ProteaPayload(BaseModel):
     model_config = ConfigDict(strict=True, frozen=True, extra="forbid")
 
 
+#: The donor policy's restrictions that arrived after its first three fields.
+#: Each is left out of the dump while it is None (see :class:`DonorPolicy`).
+_LEFT_OUT_OF_THE_DUMP_WHEN_UNSET: tuple[str, ...] = (
+    "admitted_by_release",
+    "donor_set_id",
+    "evidence_channels",
+)
+
+
 class DonorPolicy(ProteaPayload, frozen=True):
     """Which proteins may donate annotations to a query.
 
@@ -120,6 +203,13 @@ class DonorPolicy(ProteaPayload, frozen=True):
     as evidence, and the domain-signature channel is already credited
     separately elsewhere in the method. Excluding those provenance
     references is what keeps the two from being counted twice.
+
+    ``donor_set_id`` and ``evidence_channels`` state exactly, at one cut, what
+    the older fields approximate: who was a member of the corpus at that cut,
+    by a declared set of the cut's photo, and which channel each annotation
+    belonged to there. Every restriction that arrived after the first three
+    fields is left out of the dump and of the cache key while unset, so a
+    policy recorded before it dumps and keys exactly as it did.
     """
 
     #: Restrict donors to reviewed entries. False keeps the historical pool.
@@ -149,6 +239,58 @@ class DonorPolicy(ProteaPayload, frozen=True):
     #: assembled knowing which proteins the corpus would admit afterwards.
     admitted_by_release: int | None = Field(default=None, ge=1)
 
+    #: Admit only donors listed in this declared set of photo members, by its
+    #: id: a set PROTEA declares from one cut's photo, so the pool is the corpus
+    #: as it stood at that cut. ``reviewed_only`` cannot say it, because it reads
+    #: today's review status, which a protein inserted by a photo does not
+    #: carry; nor can ``admitted_by_release``, which reads the first release that
+    #: admitted a protein, not its membership at a later cut. ``None`` admits
+    #: every protein the annotation set carries, the historical pool.
+    donor_set_id: str | None = None
+
+    #: Admit only annotations whose evidence channel at the cut is listed
+    #: (:data:`EvidenceChannel`). Codes and reference prefixes cannot say it
+    #: exactly: an empty ``GO_REF`` or a reference that is not the first of its
+    #: field escapes a prefix test, and a field translation is the curator's on
+    #: a reviewed entry and a rule's on an unreviewed one, under the same code
+    #: and reference. Combined with ``evidence_codes``, both apply. Non-empty and
+    #: without repeats when set, and kept in the partition's order whatever order
+    #: it was given in, so two orders of one list are one policy: one dump for
+    #: the method seal and one pool. ``None`` admits every channel.
+    evidence_channels: list[EvidenceChannel] | None = None
+
+    @field_validator("donor_set_id")
+    @classmethod
+    def _a_declared_set_is_named(cls, value: str | None) -> str | None:
+        """Refuse an empty id: it would key a pool of its own and name no set."""
+        return None if value is None else _require_non_empty_str(value, "donor_set_id")
+
+    @field_validator("evidence_channels")
+    @classmethod
+    def _channels_are_listed_once(
+        cls, value: list[EvidenceChannel] | None
+    ) -> list[EvidenceChannel] | None:
+        """Refuse an empty list and a repeated channel, and put the list in order.
+
+        An empty list would admit no annotation and read as a restriction
+        nobody meant; unset is how every channel is admitted. A repeat, or the
+        same channels in another order, would give one policy two spellings and
+        two dumps for the method seal to tell apart, so the list is returned in
+        the order :data:`EvidenceChannel` declares (PROTEA's ``CHANNELS``).
+        """
+        if value is None:
+            return None
+        if not value:
+            raise ValueError(
+                "evidence_channels must list at least one channel; leave it unset to "
+                "admit every channel"
+            )
+        repeated = sorted({channel for channel in value if value.count(channel) > 1})
+        if repeated:
+            raise ValueError(f"evidence_channels lists {', '.join(repeated)} more than once")
+        order = get_args(EvidenceChannel)
+        return sorted(value, key=order.index)
+
     @property
     def is_permissive(self) -> bool:
         """True when the policy admits everything, the historical default.
@@ -161,22 +303,26 @@ class DonorPolicy(ProteaPayload, frozen=True):
             and self.evidence_codes is None
             and not self.exclude_reference_prefixes
             and self.admitted_by_release is None
+            and self.donor_set_id is None
+            and self.evidence_channels is None
         )
 
     @model_serializer(mode="wrap")
-    def _leave_out_an_unset_membership(
+    def _leave_out_unset_restrictions(
         self, handler: SerializerFunctionWrapHandler
     ) -> dict[str, Any]:
-        """Dump exactly what a policy dumped before membership existed, when unset.
+        """Dump exactly what a policy dumped before its later restrictions existed.
 
         The dump is recorded on every prediction set and compared field by
         field by the method seal, so a policy that grew a key at None would
         stop matching every arm on record without changing what any of them
-        did. At None the key is left out; at a release it is in.
+        did. Each restriction added after the first three fields is left out
+        while it is None, and is in the dump once it is set.
         """
         data: dict[str, Any] = handler(self)
-        if data.get("admitted_by_release") is None:
-            data.pop("admitted_by_release", None)
+        for key in _LEFT_OUT_OF_THE_DUMP_WHEN_UNSET:
+            if data.get(key) is None:
+                data.pop(key, None)
         return data
 
     def cache_discriminator(self) -> str:
@@ -196,11 +342,15 @@ class DonorPolicy(ProteaPayload, frozen=True):
             "codes=" + (",".join(sorted(self.evidence_codes)) if self.evidence_codes else "*"),
             "norefs=" + (",".join(sorted(self.exclude_reference_prefixes)) or "*"),
         ]
-        # Appended only when set, for the reason the permissive policy returns
-        # the empty string: every pool cached under a policy without it keeps
-        # its key.
+        # Each later restriction is appended only when set, for the reason the
+        # permissive policy returns the empty string: every pool cached under a
+        # policy without it keeps its key.
         if self.admitted_by_release is not None:
             parts.append(f"admitted<={self.admitted_by_release}")
+        if self.donor_set_id is not None:
+            parts.append(f"donors={self.donor_set_id}")
+        if self.evidence_channels is not None:
+            parts.append("channels=" + ",".join(sorted(self.evidence_channels)))
         return "|".join(parts)
 
 
@@ -233,16 +383,23 @@ class PredictGOTermsPayload(ProteaPayload, frozen=True):
     #: other neighbour at that depth at all. A neighbourhood of one, where the
     #: one is yourself, is not a transfer.
     #:
-    #: When true the search drops the query by the rule in ``self_exclusion``
-    #: and first asks for as many extra neighbours as that drop can cost, so
-    #: ``limit_per_entry`` keeps meaning the number of real donors rather than
-    #: the number of rows the index returned.
+    #: When true the search drops the query by the rule in ``self_exclusion``.
+    #: Under ``"sequence"`` and ``"accession"`` it first asks for as many extra
+    #: neighbours as that drop can cost, so ``limit_per_entry`` keeps meaning the
+    #: number of real donors rather than the number of rows the index returned.
+    #: Under ``"accession_after_retrieval"`` it asks for none, so
+    #: ``limit_per_entry`` is the depth retrieved before the query leaves.
     exclude_self_neighbour: bool = False
     #: The rule the exclusion follows (:data:`SelfExclusion`). Unset, the flag
     #: above decides with the meaning protea-method gives it: true is
     #: ``"sequence"``, false is ``"none"``, so every stored payload reads as it
     #: did. Set, it decides; ``"accession"`` is the query only, its twins kept.
+    #: ``"accession_after_retrieval"`` is the query only, removed after the
+    #: search, and needs the flag true.
     self_exclusion: SelfExclusion | None = None
+    #: The space the search runs in (:data:`EmbeddingTransform`). Unset, the
+    #: configuration's own space, so every stored payload searches as it did.
+    embedding_transform: EmbeddingTransform | None = None
     batch_size: PositiveInt = 1024
 
     # Search backend
@@ -362,6 +519,8 @@ class PredictGOTermsBatchPayload(ProteaPayload, frozen=True):
     exclude_self_neighbour: bool = False
     #: As in :class:`PredictGOTermsPayload`, which hands it to every batch.
     self_exclusion: SelfExclusion | None = None
+    #: As in :class:`PredictGOTermsPayload`, which hands it to every batch.
+    embedding_transform: EmbeddingTransform | None = None
     search_backend: str = "numpy"
     metric: str = "cosine"
     faiss_index_type: str = "Flat"
