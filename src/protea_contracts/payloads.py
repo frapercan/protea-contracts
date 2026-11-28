@@ -12,7 +12,7 @@ import the feature constants.
 
 from __future__ import annotations
 
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any, Literal, get_args
 
 from pydantic import (
     BaseModel,
@@ -254,8 +254,9 @@ class DonorPolicy(ProteaPayload, frozen=True):
     #: field escapes a prefix test, and a field translation is the curator's on
     #: a reviewed entry and a rule's on an unreviewed one, under the same code
     #: and reference. Combined with ``evidence_codes``, both apply. Non-empty and
-    #: without repeats when set; the cache key reads the channels sorted, so two
-    #: orders of one list share a pool. ``None`` admits every channel.
+    #: without repeats when set, and kept in the partition's order whatever order
+    #: it was given in, so two orders of one list are one policy: one dump for
+    #: the method seal and one pool. ``None`` admits every channel.
     evidence_channels: list[EvidenceChannel] | None = None
 
     @field_validator("donor_set_id")
@@ -269,12 +270,13 @@ class DonorPolicy(ProteaPayload, frozen=True):
     def _channels_are_listed_once(
         cls, value: list[EvidenceChannel] | None
     ) -> list[EvidenceChannel] | None:
-        """Refuse an empty list and a repeated channel.
+        """Refuse an empty list and a repeated channel, and put the list in order.
 
         An empty list would admit no annotation and read as a restriction
-        nobody meant; unset is how every channel is admitted. A repeat would
-        give one policy two spellings, and two dumps for the method seal to
-        tell apart.
+        nobody meant; unset is how every channel is admitted. A repeat, or the
+        same channels in another order, would give one policy two spellings and
+        two dumps for the method seal to tell apart, so the list is returned in
+        the order :data:`EvidenceChannel` declares (PROTEA's ``CHANNELS``).
         """
         if value is None:
             return None
@@ -286,7 +288,8 @@ class DonorPolicy(ProteaPayload, frozen=True):
         repeated = sorted({channel for channel in value if value.count(channel) > 1})
         if repeated:
             raise ValueError(f"evidence_channels lists {', '.join(repeated)} more than once")
-        return value
+        order = get_args(EvidenceChannel)
+        return sorted(value, key=order.index)
 
     @property
     def is_permissive(self) -> bool:

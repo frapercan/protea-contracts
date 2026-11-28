@@ -412,9 +412,13 @@ class TestTheEvidenceChannels:
         b = DonorPolicy(evidence_channels=["phylogenetic", "truth", "curated"])
         assert a.cache_discriminator() == b.cache_discriminator()
 
-    def test_the_dump_keeps_the_order_it_was_given_as_the_codes_do(self) -> None:
-        policy = DonorPolicy(evidence_channels=["truth", "curated"])
-        assert policy.model_dump()["evidence_channels"] == ["truth", "curated"]
+    def test_the_dump_lists_the_channels_in_the_partitions_order(self) -> None:
+        """Two orders of one list are one policy, so they dump the same way."""
+        given = DonorPolicy(evidence_channels=["phylogenetic", "truth", "curated"])
+        assert given.model_dump()["evidence_channels"] == ["truth", "curated", "phylogenetic"]
+        other = DonorPolicy(evidence_channels=["curated", "phylogenetic", "truth"])
+        assert given.model_dump() == other.model_dump()
+        assert given == other
 
     def test_different_lists_get_different_keys(self) -> None:
         keys = {
